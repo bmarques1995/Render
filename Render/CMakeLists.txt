@@ -24,6 +24,4 @@ if(BUILD_SHARED_LIBS)
 	endif()
 endif()
 
-set_cxx_project_standards(${TARGET_NAME} 20)
-
-# TODO: Adicione testes e instale destinos, se necessário.
+set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
