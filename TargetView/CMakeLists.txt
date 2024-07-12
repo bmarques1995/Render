@@ -10,6 +10,9 @@ file(GLOB_RECURSE TARGET_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/*.cpp")
 
 add_executable(${TARGET_NAME} ${TARGET_HDRS} ${TARGET_SRCS})
 target_link_libraries(${TARGET_NAME} PRIVATE Render)
+if(WIN32)
+	set_target_properties(${TARGET_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
 
 # TODO: Adicione testes e instale destinos, se necessário.

@@ -7,10 +7,13 @@
 
 namespace SampleRender
 {
-	class Hello
+	class SAMPLE_RENDER_DLL_COMMAND Application
 	{
 	public:
-		SAMPLE_RENDER_DLL_COMMAND static void PrintIntern();
+		Application();
+		~Application();
+
+		void Run();
 	};
 }
 

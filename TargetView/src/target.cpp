@@ -1,9 +1,11 @@
 #include <iostream>
-#include "SampleRender.hpp"
+#include <Application.hpp>
+#include "Entrypoint.hpp"
 
-int main()
+entrypoint
 {
-	SampleRender::Hello::PrintIntern();
-	std::cout << "Hello CMake.\n";
+	SampleRender::Application* app = new SampleRender::Application();
+	app->Run();
+	delete app;
 	return 0;
 }
