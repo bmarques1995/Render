@@ -7,6 +7,7 @@
 
 SampleRender::Application::Application()
 {
+	m_Window.reset(Window::Instantiate());
 }
 
 SampleRender::Application::~Application()
@@ -15,5 +16,8 @@ SampleRender::Application::~Application()
 
 void SampleRender::Application::Run()
 {
-	OutputDebugStringA("App\n");
+	while (!m_Window->ShouldClose()) 
+	{
+		m_Window->Update();
+	}
 }

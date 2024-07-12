@@ -4,6 +4,8 @@
 #pragma once
 
 #include "DLLMacro.hpp"
+#include <memory>
+#include "Window.hpp"
 
 namespace SampleRender
 {
@@ -14,6 +16,9 @@ namespace SampleRender
 		~Application();
 
 		void Run();
+	
+	private:
+		std::shared_ptr<Window> m_Window;
 	};
 }
 
