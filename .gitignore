@@ -5,3 +5,5 @@ out/
 [Oo]SX/
 dependencies/
 modules/
+*.zip
+D3D12Core/

@@ -15,6 +15,7 @@ endif()
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_helpers)
 include(target_destination)
+include(dep_tracer)
 
 # Inclua subprojetos.
 add_subdirectory ("Render")
