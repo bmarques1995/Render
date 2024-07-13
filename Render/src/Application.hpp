@@ -6,6 +6,8 @@
 #include "DLLMacro.hpp"
 #include <memory>
 #include "Window.hpp"
+#include "LayerStack.hpp"
+#include "TestLayer.hpp"
 
 namespace SampleRender
 {
@@ -19,6 +21,7 @@ namespace SampleRender
 	
 	private:
 		std::shared_ptr<Window> m_Window;
+		LayerStack m_LayerStack;
 	};
 }
 

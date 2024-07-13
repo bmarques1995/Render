@@ -32,7 +32,7 @@ endif()
 if(BUILD_SHARED_LIBS)
 	if(WIN32)
 		target_compile_definitions(${TARGET_NAME} PRIVATE SAMPLE_RENDER_DLL_MACRO_EXPORT)
-		target_compile_definitions(${TARGET_NAME} INTERFACE SAMPLE_RENDER_DLL_MACRO_EXPORT)
+		target_compile_definitions(${TARGET_NAME} INTERFACE SAMPLE_RENDER_DLL_MACRO_IMPORT)
 	endif()
 endif()
 
