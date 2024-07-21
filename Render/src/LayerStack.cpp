@@ -2,7 +2,7 @@
 
 SampleRender::LayerStack::LayerStack()
 {
-	m_LayerInsert = m_Layers.begin();
+	m_LayerInsert = 0;
 }
 
 SampleRender::LayerStack::~LayerStack()
@@ -15,8 +15,9 @@ SampleRender::LayerStack::~LayerStack()
 
 void SampleRender::LayerStack::PushLayer(Layer* layer)
 {
-	m_Layers.insert(m_LayerInsert, layer);
+	m_Layers.insert(advance(m_LayerInsert), layer);
 	layer->OnAttach();
+	m_LayerInsert++;
 }
 
 void SampleRender::LayerStack::PushOverlay(Layer* overlay)
@@ -43,7 +44,6 @@ void SampleRender::LayerStack::PopOverlay(Layer* overlay)
 	{
 		(*it)->OnDetach();
 		m_Layers.erase(it);
-		m_LayerInsert--;
 	}
 
 }

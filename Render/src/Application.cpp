@@ -3,20 +3,25 @@
 
 #include <windows.h>
 #include <iostream>
+#include <functional>
 #include "Application.hpp"
 #include "Console.hpp"
 
+SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
+bool SampleRender::Application::s_SingletonEnabled = false;
+
 SampleRender::Application::Application()
 {
+	m_RenderAPI = GraphicsAPI::D3D12;
+	EnableSingleton(this);
 	m_Window.reset(Window::Instantiate());
 	Console::Init();
-	Console::CoreLog("Sample Core Log {0}", "Chaos");
-	
+	m_Context.reset(GraphicsContext::Instantiate(m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetNativePointer(), 3));
+	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
 }
 
 SampleRender::Application::~Application()
 {
-	
 	Console::End();
 }
 
@@ -27,5 +32,24 @@ void SampleRender::Application::Run()
 		for (Layer* layer : m_LayerStack)
 			layer->OnUpdate();
 		m_Window->Update();
+		m_Context->ReceiveCommands();
+		m_Context->ClearFrameBuffer();
+		m_Context->StageViewportAndScissors();
+		m_Context->DispatchCommands();
+		m_Context->Present();
 	}
+}
+
+void SampleRender::Application::EnableSingleton(Application* ptr)
+{
+	if (!s_SingletonEnabled)
+	{
+		s_SingletonEnabled = true;
+		s_AppSingleton = ptr;
+	}
+}
+
+SampleRender::Application* SampleRender::Application::GetInstance()
+{
+	return s_AppSingleton;
 }

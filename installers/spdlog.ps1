@@ -4,7 +4,7 @@ param (
     [string]$moduleDestination
 )
 
-if (($buildMode -eq "Debug" -or $buildMode -eq "Release") -and ($installPrefix -ne ""))
+if (($buildMode -eq "Debug" -or $buildMode -eq "Release") -and ($installPrefix -ne "") -and ($moduleDestination -ne ""))
 {
     git clone --recursive https://github.com/gabime/spdlog.git "$moduleDestination/modules/spdlog"
     cmake -S "$moduleDestination/modules/spdlog" -B "$moduleDestination/dependencies/windows/spdlog" -DCMAKE_INSTALL_PREFIX="$installPrefix" -DBUILD_SHARED_LIBS=ON

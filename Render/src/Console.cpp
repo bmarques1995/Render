@@ -4,7 +4,7 @@
 #include <spdlog/sinks/dup_filter_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 
-#ifdef RENDER_USE_WINDOWS
+#ifdef RENDER_USES_WINDOWS
 #include <spdlog/sinks/msvc_sink.h>
 #else
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -21,7 +21,7 @@ void SampleRender::Console::Init()
 	std::vector<spdlog::sink_ptr> clientLogSinks;
 	std::vector<spdlog::sink_ptr> coreLogSinks;
 
-#ifdef RENDER_USE_WINDOWS
+#ifdef RENDER_USES_WINDOWS
 	clientLogSinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
 	coreLogSinks.push_back(std::make_shared<spdlog::sinks::msvc_sink_mt>());
 #else

@@ -1,6 +1,6 @@
 #include "Win32Window.hpp"
 
-#ifdef RENDER_USE_WINDOWS
+#ifdef RENDER_USES_WINDOWS
 
 SampleRender::Win32Window::Win32Window(uint32_t width, uint32_t height, std::string_view title) :
 	m_Width(width), m_Height(height), m_WindowStyle(WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_SYSMENU | WS_MINIMIZEBOX | WS_CAPTION | WS_MAXIMIZEBOX | WS_THICKFRAME),
@@ -143,8 +143,7 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 		}
 		case SIZE_MAXIMIZED:
 		{
-			RECT newDimensions = { 0, 0, LOWORD(lParam), HIWORD(lParam) };
-			window->ApplyWindowResize(wParam, &newDimensions);
+			window->ApplyWindowResize(wParam, (LPRECT)lParam);
 			break;
 		}
 		case SIZE_RESTORED:
@@ -153,16 +152,19 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 				window->m_Minimized = false;
 			if (window->m_Maximized)
 			{
-				RECT newDimensions = { 0, 0, LOWORD(lParam), HIWORD(lParam) };
-				window->ApplyWindowResize(wParam, &newDimensions);
+				window->ApplyWindowResize(wParam, (LPRECT)lParam);
 			}
 			break;
 		}
 		}
+		break;
 	}
 	case WM_SIZING:
-		RECT dimensions = { 0, 0, LOWORD(lParam), HIWORD(lParam) };
-		window->ApplyWindowResize(wParam, &dimensions);
+	{
+		window->ApplyWindowResize(wParam, (LPRECT)lParam);
+		break;
+	}
+	default:
 		break;
 	}
 	return DefWindowProcW(hWnd, msg, wParam, lParam);

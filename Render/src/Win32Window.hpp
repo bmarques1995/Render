@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef RENDER_USE_WINDOWS
+#ifdef RENDER_USES_WINDOWS
 
 #include "Window.hpp"
 #include <windows.h>

@@ -4,6 +4,7 @@
 #pragma once
 
 #include "DLLMacro.hpp"
+#include "GraphicsContext.hpp"
 #include <memory>
 #include "Window.hpp"
 #include "LayerStack.hpp"
@@ -19,9 +20,23 @@ namespace SampleRender
 
 		void Run();
 	
+		GraphicsAPI GetCurrentAPI()
+		{
+			return m_RenderAPI;
+		}
+		
+		static void EnableSingleton(Application* ptr);
+		static Application* GetInstance();
+
 	private:
 		std::shared_ptr<Window> m_Window;
+		std::shared_ptr<GraphicsContext> m_Context;
 		LayerStack m_LayerStack;
+		//TestLayer* m_TestLayer;
+		GraphicsAPI m_RenderAPI;
+
+		static Application* s_AppSingleton;
+		static bool s_SingletonEnabled;
 	};
 }
 
