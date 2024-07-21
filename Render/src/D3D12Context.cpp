@@ -3,12 +3,6 @@
 #include "D3D12Context.hpp"
 #include <cassert>
 
-extern "C"
-{
-	__declspec(dllexport) extern const UINT D3D12SDKVersion = 614;
-	__declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\";
-}
-
 SampleRender::D3D12Context::D3D12Context(uint32_t width, uint32_t height, HWND windowHandle, uint32_t framesInFlight) :
 	m_FramesInFlight(framesInFlight)
 {

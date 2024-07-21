@@ -35,7 +35,13 @@ if(WIN32)
 			"${PROJECT_SOURCE_DIR}/D3D12Core/build/native/bin/x64/D3D12Core.dll"
 			${CMAKE_PREFIX_PATH}/bin/D3D12/D3D12Core.dll
 			COMMENT "Copying D3D12Core dll into binary directory")
+	add_custom_target(copy_d3d12_sdk ALL
+			COMMAND ${CMAKE_COMMAND} -E copy
+			"${PROJECT_SOURCE_DIR}/D3D12Core/build/native/bin/x64/d3d12SDKLayers.dll"
+			${CMAKE_PREFIX_PATH}/bin/D3D12/d3d12SDKLayers.dll
+			COMMENT "Copying D3D12Core dll into binary directory")
 	add_dependencies(${TARGET_NAME} copy_d3d12)
+	add_dependencies(${TARGET_NAME} copy_d3d12_sdk)
 	target_compile_definitions(${TARGET_NAME} PUBLIC WIN32_LEAN_AND_MEAN RENDER_USES_WINDOWS NOMINMAX)
 
 	find_library(D3D12_FOUND NAMES d3d12 REQUIRED)
