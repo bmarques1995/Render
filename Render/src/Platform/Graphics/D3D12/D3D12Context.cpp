@@ -280,13 +280,8 @@ void SampleRender::D3D12Context::WaitForFence(UINT64 fenceValue)
 	{
 		hr = m_CommandQueueFence->SetEventOnCompletion(fenceValue, m_CommandQueueFenceEvent);
 		if (hr == S_OK)
-		{
 			if (WaitForSingleObject(m_CommandQueueFenceEvent, 30000) == WAIT_OBJECT_0)
-			{
 				return;
-			}
-		}
-
 		// Fallback wait
 		while (m_CommandQueueFence->GetCompletedValue() < fenceValue) Sleep(1);
 	}
