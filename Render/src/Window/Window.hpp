@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <functional>
-#include "DLLMacro.hpp"
+#include "RenderDLLMacro.hpp"
 
 namespace SampleRender
 {

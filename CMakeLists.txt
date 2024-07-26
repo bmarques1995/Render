@@ -18,5 +18,7 @@ include(target_destination)
 include(dep_tracer)
 
 # Inclua subprojetos.
+add_subdirectory ("Utils")
+add_subdirectory ("ShaderManager")
 add_subdirectory ("Render")
 add_subdirectory ("TargetView")

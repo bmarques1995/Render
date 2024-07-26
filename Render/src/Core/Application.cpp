@@ -10,14 +10,17 @@
 SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
 bool SampleRender::Application::s_SingletonEnabled = false;
 
-SampleRender::Application::Application()
+SampleRender::Application::Application() :
+	m_Compiler(HLSLBackend::CSO, "_main")
 {
 	m_RenderAPI = GraphicsAPI::D3D12;
 	EnableSingleton(this);
-	m_Window.reset(Window::Instantiate());
 	Console::Init();
+	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetNativePointer(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
+	m_Compiler.PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
+	m_Compiler.CompilePackedShader();
 }
 
 SampleRender::Application::~Application()

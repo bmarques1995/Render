@@ -16,9 +16,7 @@ file(GLOB_RECURSE RENDER_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "src/*.cpp")
 if(WIN32)
 
 trace_file(NAME "d3d12core" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/d3d12core.ps1" LOCATION "${PROJECT_SOURCE_DIR}" EXTENSION "zip")
-trace_dependency(NAME spdlog INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/spdlog.ps1")
-trace_installable_file(NAME "jsoncpp" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/jsoncpp.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
-trace_installable_file(NAME "jsoncpp" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/jsoncpp.ps1" LOCATION "${CMAKE_PREFIX_PATH}/lib" EXTENSION "lib")
+
 trace_dependency(NAME VulkanHeaders INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_headers.ps1")
 trace_dependency(NAME VulkanLoader INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_loader.ps1")
 trace_dependency(NAME Spirv-Headers INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/spirv_headers.ps1")
@@ -29,11 +27,8 @@ trace_installable_file(NAME "VkLayer_khronos_synchronization2" INSTALL_SCRIPT "$
 trace_installable_file(NAME "VkLayer_khronos_synchronization2" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_extensions.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
-trace_installable_file(NAME "dxc_manifest" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/dxc.ps1" LOCATION "${CMAKE_PREFIX_PATH}/lib/dxc" EXTENSION "txt")
 
 endif()
-
-find_package(jsoncpp)
 
 add_library(${TARGET_NAME} ${LIB_TYPE} ${RENDER_HDRS} ${RENDER_SRCS})
 target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Core>)
@@ -43,7 +38,7 @@ if(WIN32)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Window/Win32>)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/D3D12>)
 endif()
-target_link_libraries(${TARGET_NAME} PUBLIC spdlog::spdlog)
+target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager)
 set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

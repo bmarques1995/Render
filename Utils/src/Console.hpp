@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DLLMacro.hpp"
+#include "UtilsDLLMacro.hpp"
 #include "spdlog/spdlog.h"
 #include "spdlog/fmt/ostr.h"
 #include <memory>
@@ -10,7 +10,7 @@ using format_string_t = fmt::format_string<Args...>;
 
 namespace SampleRender
 {
-    class SAMPLE_RENDER_DLL_COMMAND Console
+    class SAMPLE_UTILS_DLL_COMMAND Console
     {
     public:
         static void Init();

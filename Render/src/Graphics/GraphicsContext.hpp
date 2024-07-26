@@ -3,7 +3,7 @@
 #include <any>
 #include <cstdint>
 #include <string>
-#include "DLLMacro.hpp"
+#include "RenderDLLMacro.hpp"
 
 namespace SampleRender
 {

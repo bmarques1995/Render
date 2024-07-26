@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "DLLMacro.hpp"
+#include "RenderDLLMacro.hpp"
 
 namespace SampleRender
 {

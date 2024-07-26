@@ -8,3 +8,4 @@ modules/
 *.zip
 d3d12sdk_version.txt
 D3D12Core/
+dxil/
