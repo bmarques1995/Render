@@ -5,6 +5,27 @@
 #include "CompilerExceptions.hpp"
 #include <json/json.h>
 
+const std::list<std::pair<uint32_t, uint32_t>> SampleRender::Compiler::s_ValidHLSL =
+{
+	{6, 0},
+	{6, 1},
+	{6, 2},
+	{6, 3},
+	{6, 4},
+	{6, 5},
+	{6, 6},
+	{6, 7},
+	{6, 8}
+};
+
+const std::list<std::pair<uint32_t, uint32_t>> SampleRender::Compiler::s_ValidVulkan =
+{
+	{1, 0},
+	{1, 1},
+	{1, 2},
+	{1, 3}
+};
+
 const std::unordered_map<std::string, bool> SampleRender::Compiler::s_Keywords =
 {
 	{"AppendStructuredBuffer", false},
@@ -119,13 +140,191 @@ const std::unordered_map<std::string, bool> SampleRender::Compiler::s_Keywords =
 	{"while", false},
 };
 
-SampleRender::Compiler::Compiler(HLSLBackend backend, std::string baseEntry) :
-	m_FeatureLevel("_6_7"),
+const std::unordered_map<std::string, bool> SampleRender::Compiler::s_SysValues =
+{
+	{"CLIPDISTANCE", true},
+	{"CULLDISTANCE", true},
+	{"COVERAGE", false},
+	{"DEPTH", false},
+	{"DEPTHGREATEREQUAL", false},
+	{"DEPTHLESSEQUAL", false},
+	{"DISPATCHTHREADID", false},
+	{"DOMAINLOCATION", false},
+	{"GROUPID", false},
+	{"GROUPINDEX", false},
+	{"GROUPTHREADID", false},
+	{"GSINSTANCEID", false},
+	{"INNERCOVERAGE", false},
+	{"INSIDETESSFACTOR", false},
+	{"INSTANCEID", false},
+	{"ISFRONTFACE", false},
+	{"OUTPUTCONTROLPOINTID", false},
+	{"POSITION", false},
+	{"PRIMITIVEID", false},
+	{"RENDERTARGETARRAYINDEX", false},
+	{"SAMPLEINDEX", false},
+	{"STENCILREF", false},
+	{"TARGET", true},
+	{"TESSFACTOR", false},
+	{"VERTEXID", false},
+	{"VIEWPORTARRAYINDEX", false},
+	{"SHADINGRATE", false},
+};
+
+const std::list<std::string> SampleRender::Compiler::s_BuiltinFunctions =
+{
+	{"abort"},
+	{"abs"},
+	{"acos"},
+	{"all"},
+	{"AllMemoryBarrier"},
+	{"AllMemoryBarrierWithGroupSync"},
+	{"any"},
+	{"asdouble"},
+	{"asfloat"},
+	{"asin"},
+	{"asint"},
+	{"asuint"},
+	{"asuint"},
+	{"atan"},
+	{"atan2"},
+	{"ceil"},
+	{"CheckAccessFullyMapped"},
+	{"clamp"},
+	{"clip"},
+	{"cos"},
+	{"cosh"},
+	{"countbits"},
+	{"cross"},
+	{"D3DCOLORtoUBYTE4"},
+	{"ddx"},
+	{"ddx_coarse"},
+	{"ddx_fine"},
+	{"ddy"},
+	{"ddy_coarse"},
+	{"ddy_fine"},
+	{"degrees"},
+	{"determinant"},
+	{"DeviceMemoryBarrier"},
+	{"DeviceMemoryBarrierWithGroupSync"},
+	{"distance"},
+	{"dot"},
+	{"dst"},
+	{"errorf"},
+	{"EvaluateAttributeCentroid"},
+	{"EvaluateAttributeAtSample"},
+	{"EvaluateAttributeSnapped"},
+	{"exp"},
+	{"exp2"},
+	{"f16tof32"},
+	{"f32tof16"},
+	{"faceforward"},
+	{"firstbithigh"},
+	{"firstbitlow"},
+	{"floor"},
+	{"fma"},
+	{"fmod"},
+	{"frac"},
+	{"frexp"},
+	{"fwidth"},
+	{"GetRenderTargetSampleCount"},
+	{"GetRenderTargetSamplePosition"},
+	{"GroupMemoryBarrier"},
+	{"GroupMemoryBarrierWithGroupSync"},
+	{"InterlockedAdd"},
+	{"InterlockedAnd"},
+	{"InterlockedCompareExchange"},
+	{"InterlockedCompareStore"},
+	{"InterlockedExchange"},
+	{"InterlockedMax"},
+	{"InterlockedMin"},
+	{"InterlockedOr"},
+	{"InterlockedXor"},
+	{"isfinite"},
+	{"isinf"},
+	{"isnan"},
+	{"ldexp"},
+	{"length"},
+	{"lerp"},
+	{"lit"},
+	{"log"},
+	{"log10"},
+	{"log2"},
+	{"mad"},
+	{"max"},
+	{"min"},
+	{"modf"},
+	{"msad4"},
+	{"mul"},
+	{"noise"},
+	{"normalize"},
+	{"pow"},
+	{"printf"},
+	{"Process2DQuadTessFactorsAvg"},
+	{"Process2DQuadTessFactorsMax"},
+	{"Process2DQuadTessFactorsMin"},
+	{"ProcessIsolineTessFactors"},
+	{"ProcessQuadTessFactorsAvg"},
+	{"ProcessQuadTessFactorsMax"},
+	{"ProcessQuadTessFactorsMin"},
+	{"ProcessTriTessFactorsAvg"},
+	{"ProcessTriTessFactorsMax"},
+	{"ProcessTriTessFactorsMin"},
+	{"radians"},
+	{"rcp"},
+	{"reflect"},
+	{"refract"},
+	{"reversebits"},
+	{"round"},
+	{"rsqrt"},
+	{"saturate"},
+	{"sign"},
+	{"sin"},
+	{"sincos"},
+	{"sinh"},
+	{"smoothstep"},
+	{"sqrt"},
+	{"step"},
+	{"tan"},
+	{"tanh"},
+	{"tex1D"},
+	{"tex1D"},
+	{"tex1Dbias"},
+	{"tex1Dgrad"},
+	{"tex1Dlod"},
+	{"tex1Dproj"},
+	{"tex2D"},
+	{"tex2D"},
+	{"tex2Dbias"},
+	{"tex2Dgrad"},
+	{"tex2Dlod"},
+	{"tex2Dproj"},
+	{"tex3D"},
+	{"tex3D"},
+	{"tex3Dbias"},
+	{"tex3Dgrad"},
+	{"tex3Dlod"},
+	{"tex3Dproj"},
+	{"texCUBE"},
+	{"texCUBE"},
+	{"texCUBEbias"},
+	{"texCUBEgrad"},
+	{"texCUBElod"},
+	{"texCUBEproj"},
+	{"transpose"},
+	{"trunc"}
+};
+
+SampleRender::Compiler::Compiler(HLSLBackend backend, std::string baseEntry, std::string hlslFeatureLevel, std::wstring vulkanFeatureLevel) :
 	m_PackedShaders(true),
 	m_BaseEntry(baseEntry),
 	m_Backend(backend),
 	m_DebugMode(true)
 {
+	ValidateHLSLFeatureLevel(hlslFeatureLevel);
+	m_HLSLFeatureLevel = hlslFeatureLevel;
+	ValidateVulkanFeatureLevel(vulkanFeatureLevel);
+	m_VulkanFeatureLevel = vulkanFeatureLevel;
 }
 
 SampleRender::Compiler::~Compiler()
@@ -193,18 +392,91 @@ void SampleRender::Compiler::CompilePackedShader()
 				root["BinShaders"][stage] = buffer.str();
 				buffer.str("");
 			}
+			root["HLSLFeatureLevel"] = m_HLSLFeatureLevel;
+			if (m_Backend == HLSLBackend::SPV) {
+				std::string castedFeatureLevel = std::string(m_VulkanFeatureLevel.begin(), m_VulkanFeatureLevel.end());
+				root["VulkanFeatureLevel"] = castedFeatureLevel;
+			}
 			writer->write(root, &buffer);
 			std::string jsonResult = buffer.str();
 			buffer.str("");
-			buffer << basepath << ".json";
+			buffer << basepath << (m_Backend == HLSLBackend::CSO ? ".d3d12" : ".vk") << ".json";
 			std::string jsonPath = buffer.str();
 			buffer.str("");
 			FileHandler::WriteTextFile(jsonPath, jsonResult);
 		}
 	}
-
-	
 }
+
+void SampleRender::Compiler::SetHLSLFeatureLevel(std::string version)
+{
+	ValidateHLSLFeatureLevel(version);
+	m_HLSLFeatureLevel = version;
+}
+
+void SampleRender::Compiler::SetVulkanFeatureLevel(std::wstring version)
+{
+	ValidateVulkanFeatureLevel(version);
+	m_VulkanFeatureLevel = version;
+}
+
+void SampleRender::Compiler::ValidateHLSLFeatureLevel(std::string version)
+{
+	std::regex pattern("^_(\\d+)_(\\d+)$");
+	std::smatch matches;
+	uint32_t major = 0;
+	uint32_t minor = 0;
+	if (std::regex_search(version, matches, pattern)) {
+		std::stringstream buffer;
+		buffer << matches[1].str() << " " << matches[2].str();
+		std::istringstream reader(buffer.str());
+		reader >> major >> minor;
+	}
+	else
+	{
+		throw InvalidHLSLVersion("The HLSL version must match the pattern \"^_(\\d+ )_(\\d+)$\"");
+	}
+	auto it = SearchHLSLVersion(std::make_pair(major, minor));
+	if (it == s_ValidHLSL.end())
+	{
+		std::stringstream valid_hlsl;
+		valid_hlsl << "\"";
+		for (auto it = s_ValidHLSL.begin(); it != s_ValidHLSL.end(); it++)
+			valid_hlsl << "_" << it->first << "_" << it->second << "|";
+		valid_hlsl << "\"";
+		throw InvalidHLSLVersion("The valid HLSL versions are: {}");
+	}
+}
+
+void SampleRender::Compiler::ValidateVulkanFeatureLevel(std::wstring version)
+{
+	std::wregex pattern(L"^(\\d+)\\.(\\d+)$");
+	std::wsmatch matches;
+	uint32_t major = 0;
+	uint32_t minor = 0;
+	if (std::regex_search(version, matches, pattern)) {
+		std::wstringstream buffer;
+		buffer << matches[1].str() << " " << matches[2].str();
+		std::wistringstream reader(buffer.str());
+		reader >> major >> minor;
+	}
+	else
+	{
+		throw InvalidVulkanVersion("The HLSL version must match the pattern \"^(\\d+)\\.(\\d+)$\"");
+	}
+	auto it = SearchVulkanVersion(std::make_pair(major, minor));
+	if (it == s_ValidVulkan.end())
+	{
+		std::stringstream valid_vulkan;
+		valid_vulkan << "\"";
+		for (auto it = s_ValidVulkan.begin(); it != s_ValidVulkan.end(); it++)
+			valid_vulkan << "_" << it->first << "_" << it->second << "|";
+		valid_vulkan << "\"";
+		throw InvalidVulkanVersion("The valid HLSL versions are: {}");
+	}
+}
+
+
 
 void SampleRender::Compiler::CompileStage(std::string source, std::string stage, std::string basepath)
 {
@@ -217,10 +489,12 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 
 	buffer << stage << m_BaseEntry;
 	tempbuffer = buffer.str();
-	ValidateName(tempbuffer);
+	ValidateNameOverKeywords(tempbuffer);
+	ValidateNameOverSysValues(tempbuffer);
+	ValidateNameOverBuiltinFunctions(tempbuffer);
 	entrypoint = std::wstring(tempbuffer.begin(), tempbuffer.end());
 	buffer.str("");
-	buffer << stage << m_FeatureLevel;
+	buffer << stage << m_HLSLFeatureLevel;
 	tempbuffer = buffer.str();
 	formattedStage = std::wstring(tempbuffer.begin(), tempbuffer.end());
 	buffer.str("");
@@ -249,6 +523,18 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 	else
 		args.push_back(L"-O3");
 
+	std::wstring vulkan_fl;
+	if (m_Backend == HLSLBackend::SPV)
+	{
+		std::wstringstream vulkan_fl_buffer;
+		vulkan_fl_buffer << L"-fspv-target-env=vulkan" << m_VulkanFeatureLevel;
+		vulkan_fl = vulkan_fl_buffer.str();
+		args.push_back(L"-spirv");
+		args.push_back(vulkan_fl.c_str());
+		if((stage.compare("vs") == 0) || (stage.compare("gs") == 0) || (stage.compare("ds") == 0))
+			args.push_back(L"-fvk-invert-y");
+	}
+
 	DxcBuffer srcBuffer =
 	{
 		.Ptr = (void *) &*source.begin(),
@@ -272,7 +558,31 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 		FileHandler::WriteBinFile(outputPath,(std::byte*)blob->GetBufferPointer(), blob->GetBufferSize());
 }
 
-void SampleRender::Compiler::ValidateName(std::string name)
+std::list<std::string>::const_iterator SampleRender::Compiler::SearchBuiltinName(std::string name)
+{
+	for (auto it = s_BuiltinFunctions.begin(); it != s_BuiltinFunctions.end(); it++)
+		if (it->compare(name) == 0)
+			return it;
+	return s_BuiltinFunctions.end();
+}
+
+std::list<std::pair<uint32_t, uint32_t>>::const_iterator SampleRender::Compiler::SearchHLSLVersion(std::pair<uint32_t, uint32_t> value)
+{
+	for (auto it = s_ValidHLSL.begin(); it != s_ValidHLSL.end(); it++)
+		if ((it->first == value.first) && (it->second == value.second))
+			return it;
+	return s_ValidHLSL.end();
+}
+
+std::list<std::pair<uint32_t, uint32_t>>::const_iterator SampleRender::Compiler::SearchVulkanVersion(std::pair<uint32_t, uint32_t> value)
+{
+	for (auto it = s_ValidVulkan.begin(); it != s_ValidVulkan.end(); it++)
+		if ((it->first == value.first) && (it->second == value.second))
+			return it;
+	return s_ValidVulkan.end();
+}
+
+void SampleRender::Compiler::ValidateNameOverKeywords(std::string name)
 {
 	std::regex variablePattern("[a-zA-Z_][a-zA-Z0-9_]*$");
 	std::regex typeExtended("([1-4]|[1-4]x[1-4])$");
@@ -298,6 +608,55 @@ void SampleRender::Compiler::ValidateName(std::string name)
 	if (it != s_Keywords.end())
 		if(it->second == usesSizer)
 			throw InvalidNameException("You cannot use HLSL keywords");
+}
+
+void SampleRender::Compiler::ValidateNameOverSysValues(std::string name)
+{
+	std::regex svPattern("^SV_(\\w+)");
+	std::regex enumerationPattern("^(\\D+)(\\d+)$");
+
+	std::smatch matches;
+	std::string treatedName;
+	bool enumerated = false;
+
+	if (std::regex_search(name, matches, svPattern))
+	{
+		treatedName = matches[1].str();
+	}
+	else
+	{
+		return;
+	}
+
+	if (std::regex_search(treatedName, matches, enumerationPattern))
+	{
+		treatedName = matches[1].str();
+		enumerated = true;
+	}
+
+	auto it = s_SysValues.find(treatedName);
+	if (it != s_SysValues.end())
+		if (it->second == enumerated)
+		{
+			std::stringstream error;
+			std::string castedError;
+			error << name << " is a HLSL System Value (SV_) and cannot be used";
+			castedError = error.str();
+			throw InvalidNameException(castedError);
+		}
+}
+
+void SampleRender::Compiler::ValidateNameOverBuiltinFunctions(std::string name)
+{
+	auto it = SearchBuiltinName(name);
+	if (it != s_BuiltinFunctions.end())
+	{
+		std::stringstream error;
+		std::string castedError;
+		error << it->c_str() << " is a builtin function";
+		castedError = error.str();
+		throw InvalidNameException(castedError);
+	}
 }
 
 void SampleRender::Compiler::ValidatePipeline(std::string stage)

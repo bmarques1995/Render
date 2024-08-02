@@ -30,6 +30,8 @@ trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJE
 
 endif()
 
+find_package(JsonCpp)
+
 add_library(${TARGET_NAME} ${LIB_TYPE} ${RENDER_HDRS} ${RENDER_SRCS})
 target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Core>)
 target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Window>)
@@ -38,7 +40,7 @@ if(WIN32)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Window/Win32>)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/D3D12>)
 endif()
-target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager)
+target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager jsoncpp_lib)
 set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

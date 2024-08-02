@@ -6,14 +6,14 @@
 
 namespace SampleRender
 {
-	class CompilerException : public std::exception
+	class SAMPLE_SHADER_MNG_DLL_COMMAND CompilerException : public std::exception
 	{
 	protected:
 		CompilerException(std::string reason);
 
 		std::string m_Exception;
 	public:
-		char const* what() const override;
+		const char* what() const override;
 	};
 	class SAMPLE_SHADER_MNG_DLL_COMMAND InvalidNameException : public CompilerException
 	{
@@ -31,5 +31,17 @@ namespace SampleRender
 	{
 	public:
 		InvalidFilepathException(std::string reason);
+	};
+
+	class SAMPLE_SHADER_MNG_DLL_COMMAND InvalidHLSLVersion : public CompilerException
+	{
+	public:
+		InvalidHLSLVersion(std::string reason);
+	};
+
+	class SAMPLE_SHADER_MNG_DLL_COMMAND InvalidVulkanVersion : public CompilerException
+	{
+	public:
+		InvalidVulkanVersion(std::string reason);
 	};
 }

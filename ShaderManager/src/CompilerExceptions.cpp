@@ -5,7 +5,7 @@ SampleRender::CompilerException::CompilerException(std::string reason) :
 {
 }
 
-char const* SampleRender::CompilerException::what() const
+const char* SampleRender::CompilerException::what() const
 {
 	return m_Exception.c_str();
 }
@@ -21,6 +21,16 @@ SampleRender::InvalidFilepathException::InvalidFilepathException(std::string rea
 }
 
 SampleRender::InvalidPipelineException::InvalidPipelineException(std::string reason) :
+	CompilerException(reason)
+{
+}
+
+SampleRender::InvalidHLSLVersion::InvalidHLSLVersion(std::string reason) :
+	CompilerException(reason)
+{
+}
+
+SampleRender::InvalidVulkanVersion::InvalidVulkanVersion(std::string reason) :
 	CompilerException(reason)
 {
 }

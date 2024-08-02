@@ -6,12 +6,12 @@
 #include <functional>
 #include "Application.hpp"
 #include "Console.hpp"
+#include "CompilerExceptions.hpp"
 
 SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
 bool SampleRender::Application::s_SingletonEnabled = false;
 
-SampleRender::Application::Application() :
-	m_Compiler(HLSLBackend::CSO, "_main")
+SampleRender::Application::Application()
 {
 	m_RenderAPI = GraphicsAPI::D3D12;
 	EnableSingleton(this);
@@ -19,8 +19,20 @@ SampleRender::Application::Application() :
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetNativePointer(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
-	m_Compiler.PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
-	m_Compiler.CompilePackedShader();
+	
+	try
+	{
+		m_SPVCompiler.reset(new Compiler(HLSLBackend::SPV, "_main", "_6_8", L"1.3"));
+		m_CSOCompiler.reset(new Compiler(HLSLBackend::CSO, "_main", "_6_8"));
+		m_SPVCompiler->PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
+		m_CSOCompiler->PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
+		m_SPVCompiler->CompilePackedShader();
+		m_CSOCompiler->CompilePackedShader();
+	}
+	catch (CompilerException e)
+	{
+		Console::CoreError("{}", e.what());
+	}
 }
 
 SampleRender::Application::~Application()

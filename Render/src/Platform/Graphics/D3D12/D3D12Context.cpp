@@ -11,7 +11,7 @@ SampleRender::D3D12Context::D3D12Context(uint32_t width, uint32_t height, HWND w
 #ifdef RENDER_DEBUG_MODE
 	EnableDebug();
 #endif
-
+	
 	CreateFactory();
 	CreateAdapter();
 	CreateDevice();

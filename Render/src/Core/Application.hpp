@@ -36,7 +36,8 @@ namespace SampleRender
 		//TestLayer* m_TestLayer;
 		GraphicsAPI m_RenderAPI;
 
-		Compiler m_Compiler;
+		std::shared_ptr<Compiler> m_CSOCompiler;
+		std::shared_ptr<Compiler> m_SPVCompiler;
 		static Application* s_AppSingleton;
 		static bool s_SingletonEnabled;
 	};
