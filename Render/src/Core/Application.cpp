@@ -19,7 +19,6 @@ SampleRender::Application::Application()
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetNativePointer(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
-	
 	try
 	{
 		m_SPVCompiler.reset(new Compiler(HLSLBackend::SPV, "_main", "_6_8", L"1.3"));
@@ -33,6 +32,14 @@ SampleRender::Application::Application()
 	{
 		Console::CoreError("{}", e.what());
 	}
+
+	BufferLayout layout(
+	{
+		{ShaderDataType::Float3, "POSITION", false},
+		{ShaderDataType::Float4, "COLOR", false}
+	});
+
+	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout));
 }
 
 SampleRender::Application::~Application()
@@ -49,6 +56,7 @@ void SampleRender::Application::Run()
 		m_Window->Update();
 		m_Context->ReceiveCommands();
 		m_Context->ClearFrameBuffer();
+		m_Shader->Stage();
 		m_Context->StageViewportAndScissors();
 		m_Context->DispatchCommands();
 		m_Context->Present();

@@ -70,7 +70,18 @@ namespace SampleRender
 			}
 			return nullptr;
 		}
+
+		CT* GetConstRef() const
+		{
+			return GetRef();
+		}
+
 		CT* Get()
+		{
+			return m_Pointer;
+		}
+		
+		CT* GetConst() const
 		{
 			return m_Pointer;
 		}

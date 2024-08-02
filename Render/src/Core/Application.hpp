@@ -10,6 +10,7 @@
 #include "LayerStack.hpp"
 #include "TestLayer.hpp"
 #include "Compiler.hpp"
+#include "Shader.hpp"
 
 namespace SampleRender
 {
@@ -32,6 +33,7 @@ namespace SampleRender
 	private:
 		std::shared_ptr<Window> m_Window;
 		std::shared_ptr<GraphicsContext> m_Context;
+		std::shared_ptr<Shader> m_Shader;
 		LayerStack m_LayerStack;
 		//TestLayer* m_TestLayer;
 		GraphicsAPI m_RenderAPI;

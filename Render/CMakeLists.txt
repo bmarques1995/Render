@@ -40,7 +40,7 @@ if(WIN32)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Window/Win32>)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/D3D12>)
 endif()
-target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager jsoncpp_lib)
+target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager jsoncpp_lib PRIVATE ${CMAKE_PREFIX_PATH}/lib/dxcompiler.lib)
 set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

@@ -101,6 +101,16 @@ void SampleRender::D3D12Context::StageViewportAndScissors()
 	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
 }
 
+ID3D12Device10* SampleRender::D3D12Context::GetDevicePtr() const
+{
+	return m_Device.GetConst();
+}
+
+ID3D12GraphicsCommandList* SampleRender::D3D12Context::GetCurrentCommandList() const
+{
+	return m_CommandList.GetConst();
+}
+
 const std::string SampleRender::D3D12Context::GetGPUName()
 {
 	DXGI_ADAPTER_DESC gpuDescription;

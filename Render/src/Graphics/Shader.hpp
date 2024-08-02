@@ -1,15 +1,18 @@
 #pragma once
 
+#include "RenderDLLMacro.hpp"
+#include "BufferLayout.hpp"
+#include "GraphicsContext.hpp"
+
 namespace SampleRender
 {
-	class Shader
+	class SAMPLE_RENDER_DLL_COMMAND Shader
 	{
 	public:
-		Shader();
-		~Shader();
+		virtual void Stage() = 0;
+		virtual uint32_t GetStride() const = 0;
+		virtual uint32_t GetOffset() const = 0;
 
-		void update();
-
-		static Shader* Instantiate();
+		static Shader* Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, BufferLayout layout);
 	};
 }

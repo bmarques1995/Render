@@ -30,6 +30,9 @@ namespace SampleRender
 		void Present() override;
 		void StageViewportAndScissors() override;
 		
+		ID3D12Device10* GetDevicePtr() const;
+		ID3D12GraphicsCommandList* GetCurrentCommandList() const;
+
 		const std::string GetGPUName() override;
 
 		void WindowResize(uint32_t width, uint32_t height) override;
