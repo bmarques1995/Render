@@ -24,6 +24,8 @@ namespace SampleRender
 		virtual void Present() = 0;
 		virtual void StageViewportAndScissors() = 0;
 
+		virtual void Draw(uint32_t elements) = 0;
+
 		virtual const std::string GetGPUName() = 0;
 
 		virtual void WindowResize(uint32_t width, uint32_t height) = 0;

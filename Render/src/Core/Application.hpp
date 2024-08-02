@@ -11,6 +11,7 @@
 #include "TestLayer.hpp"
 #include "Compiler.hpp"
 #include "Shader.hpp"
+#include "Buffer.hpp"
 
 namespace SampleRender
 {
@@ -31,9 +32,26 @@ namespace SampleRender
 		static Application* GetInstance();
 
 	private:
+
+		float vBuffer[21] =
+		{
+			.0f, .5f, .0f, 1.0f, .0f, .0f, 1.0f,
+			.5f, -.5f, .0f, .0f, 1.0f, .0f, 1.0f,
+			-.5f, -.5f, .0f, .0f, .0f, 1.0f, 1.0f
+		};
+
+		uint32_t iBuffer[3] =
+		{
+			0,1,2
+		};
+
 		std::shared_ptr<Window> m_Window;
 		std::shared_ptr<GraphicsContext> m_Context;
 		std::shared_ptr<Shader> m_Shader;
+
+		std::shared_ptr<VertexBuffer> m_VertexBuffer;
+		std::shared_ptr<IndexBuffer> m_IndexBuffer;
+		
 		LayerStack m_LayerStack;
 		//TestLayer* m_TestLayer;
 		GraphicsAPI m_RenderAPI;

@@ -30,6 +30,8 @@ namespace SampleRender
 		void Present() override;
 		void StageViewportAndScissors() override;
 		
+		void Draw(uint32_t elements) override;
+
 		ID3D12Device10* GetDevicePtr() const;
 		ID3D12GraphicsCommandList* GetCurrentCommandList() const;
 

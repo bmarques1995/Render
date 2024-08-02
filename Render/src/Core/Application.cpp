@@ -40,6 +40,8 @@ SampleRender::Application::Application()
 	});
 
 	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout));
+	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) &vBuffer[0], sizeof(vBuffer), layout.GetStride()));
+	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }
 
 SampleRender::Application::~Application()
@@ -57,7 +59,10 @@ void SampleRender::Application::Run()
 		m_Context->ReceiveCommands();
 		m_Context->ClearFrameBuffer();
 		m_Shader->Stage();
+		m_VertexBuffer->Stage();
+		m_IndexBuffer->Stage();
 		m_Context->StageViewportAndScissors();
+		m_Context->Draw(m_IndexBuffer->GetCount());
 		m_Context->DispatchCommands();
 		m_Context->Present();
 	}

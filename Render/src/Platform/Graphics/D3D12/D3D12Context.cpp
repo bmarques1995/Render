@@ -101,6 +101,12 @@ void SampleRender::D3D12Context::StageViewportAndScissors()
 	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
 }
 
+void SampleRender::D3D12Context::Draw(uint32_t elements)
+{
+	m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_CommandList->DrawIndexedInstanced(elements, 1, 0, 0, 0);
+}
+
 ID3D12Device10* SampleRender::D3D12Context::GetDevicePtr() const
 {
 	return m_Device.GetConst();
