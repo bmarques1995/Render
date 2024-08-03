@@ -33,7 +33,7 @@ namespace SampleRender
 		void Draw(uint32_t elements) override;
 
 		ID3D12Device10* GetDevicePtr() const;
-		ID3D12GraphicsCommandList* GetCurrentCommandList() const;
+		ID3D12GraphicsCommandList6* GetCurrentCommandList() const;
 
 		const std::string GetGPUName() override;
 
@@ -84,7 +84,7 @@ namespace SampleRender
 		float m_ClearColor[4];
 
 		ComPointer<ID3D12CommandAllocator> m_CommandAllocator;
-		ComPointer<ID3D12GraphicsCommandList> m_CommandList;
+		ComPointer<ID3D12GraphicsCommandList6> m_CommandList;
 
 		UINT m_CurrentBufferIndex = -1;
 	};

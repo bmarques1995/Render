@@ -112,7 +112,7 @@ ID3D12Device10* SampleRender::D3D12Context::GetDevicePtr() const
 	return m_Device.GetConst();
 }
 
-ID3D12GraphicsCommandList* SampleRender::D3D12Context::GetCurrentCommandList() const
+ID3D12GraphicsCommandList6* SampleRender::D3D12Context::GetCurrentCommandList() const
 {
 	return m_CommandList.GetConst();
 }

@@ -48,6 +48,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 
 	CreateGraphicsRootSignature(m_RootSignature.GetAddressOf(), device);
 
+	//https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_pipeline_state_subobject_type
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsDesc = {};
 	graphicsDesc.NodeMask = 1;
 	graphicsDesc.InputLayout = { ied, (uint32_t)nativeElements.size() };
@@ -73,6 +74,8 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	BuildBlender(&graphicsDesc);
 	BuildRasterizer(&graphicsDesc);
 	BuildDepthStencil(&graphicsDesc);
+
+	D3D12_PIPELINE_STATE_STREAM_DESC sample;
 
 	hr = device->CreateGraphicsPipelineState(&graphicsDesc, IID_PPV_ARGS(m_GraphicsPipeline.GetAddressOf()));
 	assert(hr == S_OK);
