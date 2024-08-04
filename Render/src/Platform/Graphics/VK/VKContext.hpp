@@ -4,7 +4,7 @@
 #include "ComPointer.hpp"
 #include <vector>
 
-#include "VKSafeInclude.hpp"
+#include <vulkan/vulkan.h>
 #include <optional>
 
 namespace SampleRender

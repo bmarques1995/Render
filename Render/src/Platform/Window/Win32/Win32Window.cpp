@@ -123,7 +123,6 @@ void SampleRender::Win32Window::AdjustDimensions(LPRECT windowDimensions)
 void SampleRender::Win32Window::ApplyWindowResize(WPARAM wParam, LPRECT newDimensions)
 {
 	RECT windowDimensions = { 0, 0, (LONG)m_Width, (LONG)m_Height };
-	AdjustWindowRectEx(&windowDimensions, m_WindowStyle, 0, 0);
 	int32_t deltaWidth = (newDimensions->right - newDimensions->left) - (windowDimensions.right - windowDimensions.left);
 	int32_t deltaHeight = (newDimensions->bottom - newDimensions->top) - (windowDimensions.bottom - windowDimensions.top);
 	if(m_Resizer)
