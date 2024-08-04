@@ -9,7 +9,8 @@
 #include "Window.hpp"
 #include "LayerStack.hpp"
 #include "TestLayer.hpp"
-#include "Compiler.hpp"
+#include "CSOCompiler.hpp"
+#include "SPVCompiler.hpp"
 #include "Shader.hpp"
 #include "Buffer.hpp"
 
@@ -59,8 +60,8 @@ namespace SampleRender
 		GraphicsAPI m_RenderAPI;
 
 		std::string m_ProgramLocation;
-		std::shared_ptr<Compiler> m_CSOCompiler;
-		std::shared_ptr<Compiler> m_SPVCompiler;
+		std::shared_ptr<CSOCompiler> m_CSOCompiler;
+		std::shared_ptr<SPVCompiler> m_SPVCompiler;
 		static Application* s_AppSingleton;
 		static bool s_SingletonEnabled;
 	};

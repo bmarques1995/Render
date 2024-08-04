@@ -18,14 +18,6 @@ const std::list<std::pair<uint32_t, uint32_t>> SampleRender::Compiler::s_ValidHL
 	{6, 8}
 };
 
-const std::list<std::pair<uint32_t, uint32_t>> SampleRender::Compiler::s_ValidVulkan =
-{
-	{1, 0},
-	{1, 1},
-	{1, 2},
-	{1, 3}
-};
-
 const std::unordered_map<std::string, bool> SampleRender::Compiler::s_Keywords =
 {
 	{"AppendStructuredBuffer", false},
@@ -315,16 +307,16 @@ const std::list<std::string> SampleRender::Compiler::s_BuiltinFunctions =
 	{"trunc"}
 };
 
-SampleRender::Compiler::Compiler(HLSLBackend backend, std::string baseEntry, std::string hlslFeatureLevel, std::wstring vulkanFeatureLevel) :
+SampleRender::Compiler::Compiler(std::string_view backendExtension, std::string_view graphicsAPIExtension, std::string baseEntry, std::string hlslFeatureLevel) :
 	m_PackedShaders(true),
+	m_BackendExtension(backendExtension),
+	m_GraphicsAPIExtension(graphicsAPIExtension),
 	m_BaseEntry(baseEntry),
-	m_Backend(backend),
 	m_DebugMode(true)
 {
 	ValidateHLSLFeatureLevel(hlslFeatureLevel);
 	m_HLSLFeatureLevel = hlslFeatureLevel;
-	ValidateVulkanFeatureLevel(vulkanFeatureLevel);
-	m_VulkanFeatureLevel = vulkanFeatureLevel;
+	
 }
 
 SampleRender::Compiler::~Compiler()
@@ -361,63 +353,10 @@ void SampleRender::Compiler::SetBuildMode(bool isDebug)
 	m_DebugMode = isDebug;
 }
 
-void SampleRender::Compiler::CompilePackedShader()
-{
-	static const std::regex pattern("^(.*[\\/])([^\\/]+)\\.hlsl$");
-	std::smatch matches;
-	static const std::vector<std::string> shaderStages = { "vs", "ps" };
-
-	Json::Value root;
-	Json::StreamWriterBuilder builder;
-	const std::unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
-
-	for (auto& shaderPath : m_ShaderFilepaths)
-	{
-		std::string basepath;
-		if (std::regex_match(shaderPath, matches, pattern))
-		{
-			std::stringstream buffer;
-			buffer << matches[1].str();
-			buffer << matches[2].str();
-			basepath = buffer.str();
-			buffer.str("");
-			if (!FileHandler::FileExists(shaderPath))
-				throw InvalidFilepathException("File not found");
-			std::string shader;
-			FileHandler::ReadTextFile(shaderPath, &shader);
-			for (auto& stage : shaderStages)
-			{
-				CompileStage(shader, stage, basepath);
-				buffer << matches[2].str() << "." << stage << (m_Backend == HLSLBackend::CSO ? ".cso" : ".spv");
-				root["BinShaders"][stage] = buffer.str();
-				buffer.str("");
-			}
-			root["HLSLFeatureLevel"] = m_HLSLFeatureLevel;
-			if (m_Backend == HLSLBackend::SPV) {
-				std::string castedFeatureLevel = std::string(m_VulkanFeatureLevel.begin(), m_VulkanFeatureLevel.end());
-				root["VulkanFeatureLevel"] = castedFeatureLevel;
-			}
-			writer->write(root, &buffer);
-			std::string jsonResult = buffer.str();
-			buffer.str("");
-			buffer << basepath << (m_Backend == HLSLBackend::CSO ? ".d3d12" : ".vk") << ".json";
-			std::string jsonPath = buffer.str();
-			buffer.str("");
-			FileHandler::WriteTextFile(jsonPath, jsonResult);
-		}
-	}
-}
-
 void SampleRender::Compiler::SetHLSLFeatureLevel(std::string version)
 {
 	ValidateHLSLFeatureLevel(version);
 	m_HLSLFeatureLevel = version;
-}
-
-void SampleRender::Compiler::SetVulkanFeatureLevel(std::wstring version)
-{
-	ValidateVulkanFeatureLevel(version);
-	m_VulkanFeatureLevel = version;
 }
 
 void SampleRender::Compiler::ValidateHLSLFeatureLevel(std::string version)
@@ -448,57 +387,13 @@ void SampleRender::Compiler::ValidateHLSLFeatureLevel(std::string version)
 	}
 }
 
-void SampleRender::Compiler::ValidateVulkanFeatureLevel(std::wstring version)
-{
-	std::wregex pattern(L"^(\\d+)\\.(\\d+)$");
-	std::wsmatch matches;
-	uint32_t major = 0;
-	uint32_t minor = 0;
-	if (std::regex_search(version, matches, pattern)) {
-		std::wstringstream buffer;
-		buffer << matches[1].str() << " " << matches[2].str();
-		std::wistringstream reader(buffer.str());
-		reader >> major >> minor;
-	}
-	else
-	{
-		throw InvalidVulkanVersion("The HLSL version must match the pattern \"^(\\d+)\\.(\\d+)$\"");
-	}
-	auto it = SearchVulkanVersion(std::make_pair(major, minor));
-	if (it == s_ValidVulkan.end())
-	{
-		std::stringstream valid_vulkan;
-		valid_vulkan << "\"";
-		for (auto it = s_ValidVulkan.begin(); it != s_ValidVulkan.end(); it++)
-			valid_vulkan << "_" << it->first << "_" << it->second << "|";
-		valid_vulkan << "\"";
-		throw InvalidVulkanVersion("The valid HLSL versions are: {}");
-	}
-}
-
-
-
 void SampleRender::Compiler::CompileStage(std::string source, std::string stage, std::string basepath)
 {
 	HRESULT hr;
 	std::stringstream buffer;
-	std::string tempbuffer;
-	std::wstring entrypoint;
-	std::wstring formattedStage;
 	std::string outputPath;
 
-	buffer << stage << m_BaseEntry;
-	tempbuffer = buffer.str();
-	ValidateNameOverKeywords(tempbuffer);
-	ValidateNameOverSysValues(tempbuffer);
-	ValidateNameOverBuiltinFunctions(tempbuffer);
-	entrypoint = std::wstring(tempbuffer.begin(), tempbuffer.end());
-	buffer.str("");
-	buffer << stage << m_HLSLFeatureLevel;
-	tempbuffer = buffer.str();
-	formattedStage = std::wstring(tempbuffer.begin(), tempbuffer.end());
-	buffer.str("");
-	buffer << basepath << "." << stage << (m_Backend == HLSLBackend::CSO ? ".cso" : ".spv");
+	buffer << basepath << "." << stage << m_BackendExtension;
 	outputPath = buffer.str();
 	buffer.str("");
 
@@ -510,31 +405,6 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 	DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(utils.GetAddressOf()));
 	DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(compiler.GetAddressOf()));
 
-	std::vector<const wchar_t*> args;
-	args.push_back(L"-Zpc");
-	args.push_back(L"-HV");
-	args.push_back(L"2021");
-	args.push_back(L"-T");
-	args.push_back(formattedStage.c_str());
-	args.push_back(L"-E");
-	args.push_back(entrypoint.c_str());
-	if(m_DebugMode)
-		args.push_back(L"-O0");
-	else
-		args.push_back(L"-O3");
-
-	std::wstring vulkan_fl;
-	if (m_Backend == HLSLBackend::SPV)
-	{
-		std::wstringstream vulkan_fl_buffer;
-		vulkan_fl_buffer << L"-fspv-target-env=vulkan" << m_VulkanFeatureLevel;
-		vulkan_fl = vulkan_fl_buffer.str();
-		args.push_back(L"-spirv");
-		args.push_back(vulkan_fl.c_str());
-		if((stage.compare("vs") == 0) || (stage.compare("gs") == 0) || (stage.compare("ds") == 0))
-			args.push_back(L"-fvk-invert-y");
-	}
-
 	DxcBuffer srcBuffer =
 	{
 		.Ptr = (void *) &*source.begin(),
@@ -543,7 +413,7 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 	};
 
 	ComPointer<IDxcResult> result;
-	hr = compiler->Compile(&srcBuffer, args.data(),(uint32_t) args.size(), nullptr, IID_PPV_ARGS(result.GetAddressOf()));
+	hr = compiler->Compile(&srcBuffer, m_ArgList.data(),(uint32_t) m_ArgList.size(), nullptr, IID_PPV_ARGS(result.GetAddressOf()));
 
 	blob.Release();
 	hr = result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(blob.GetAddressOf()), nullptr);
@@ -556,6 +426,14 @@ void SampleRender::Compiler::CompileStage(std::string source, std::string stage,
 	}
 	else
 		FileHandler::WriteBinFile(outputPath,(std::byte*)blob->GetBufferPointer(), blob->GetBufferSize());
+}
+
+void SampleRender::Compiler::ReadShaderSource(std::string_view path, std::string* shaderSource)
+{
+	if (!FileHandler::FileExists(path))
+		throw InvalidFilepathException("File not found");
+	
+	FileHandler::ReadTextFile(path, shaderSource);
 }
 
 std::list<std::string>::const_iterator SampleRender::Compiler::SearchBuiltinName(std::string name)
@@ -572,14 +450,6 @@ std::list<std::pair<uint32_t, uint32_t>>::const_iterator SampleRender::Compiler:
 		if ((it->first == value.first) && (it->second == value.second))
 			return it;
 	return s_ValidHLSL.end();
-}
-
-std::list<std::pair<uint32_t, uint32_t>>::const_iterator SampleRender::Compiler::SearchVulkanVersion(std::pair<uint32_t, uint32_t> value)
-{
-	for (auto it = s_ValidVulkan.begin(); it != s_ValidVulkan.end(); it++)
-		if ((it->first == value.first) && (it->second == value.second))
-			return it;
-	return s_ValidVulkan.end();
 }
 
 void SampleRender::Compiler::ValidateNameOverKeywords(std::string name)

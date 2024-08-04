@@ -14,7 +14,7 @@ bool SampleRender::Application::s_SingletonEnabled = false;
 SampleRender::Application::Application(std::string programLocation) :
 	m_ProgramLocation(programLocation)
 {
-	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK;
+	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_D3D12;
 	EnableSingleton(this);
 	Console::Init();
 	m_Window.reset(Window::Instantiate());
@@ -22,8 +22,8 @@ SampleRender::Application::Application(std::string programLocation) :
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
 	try
 	{
-		m_SPVCompiler.reset(new Compiler(HLSLBackend::SPV, "_main", "_6_8", L"1.3"));
-		m_CSOCompiler.reset(new Compiler(HLSLBackend::CSO, "_main", "_6_8"));
+		m_SPVCompiler.reset(new SPVCompiler("_main", "_6_8", "1.3"));
+		m_CSOCompiler.reset(new CSOCompiler("_main", "_6_8"));
 		m_SPVCompiler->PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
 		m_CSOCompiler->PushShaderPath("./assets/shaders/HelloTriangle.hlsl");
 		m_SPVCompiler->CompilePackedShader();
@@ -58,11 +58,11 @@ void SampleRender::Application::Run()
 			layer->OnUpdate();
 		m_Window->Update();
 		m_Context->ReceiveCommands();
-		//m_Shader->Stage();
-		//m_VertexBuffer->Stage();
-		//m_IndexBuffer->Stage();
+		m_Shader->Stage();
+		m_VertexBuffer->Stage();
+		m_IndexBuffer->Stage();
 		m_Context->StageViewportAndScissors();
-		//m_Context->Draw(m_IndexBuffer->GetCount());
+		m_Context->Draw(m_IndexBuffer->GetCount());
 		m_Context->DispatchCommands();
 		m_Context->Present();
 	}

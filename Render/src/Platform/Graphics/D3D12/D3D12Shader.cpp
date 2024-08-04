@@ -217,7 +217,7 @@ void SampleRender::D3D12Shader::BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_
 
 void SampleRender::D3D12Shader::PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)
 {
-	std::string shaderName = m_PipelineInfo["BinShaders"][stage.data()].asString();
+	std::string shaderName = m_PipelineInfo["BinShaders"][stage.data()]["filename"].asString();
 	std::stringstream shaderFullPath;
 	shaderFullPath << m_ShaderDir << "/" << shaderName;
 	std::string shaderPath = shaderFullPath.str();
