@@ -4,19 +4,22 @@
 #include <cstdint>
 #include <string>
 #include "RenderDLLMacro.hpp"
+#include "Window.hpp"
 
 namespace SampleRender
 {
 	enum GraphicsAPI
 	{
-		D3D12
+		SAMPLE_RENDER_GRAPHICS_API_VK = 1,
+#ifdef RENDER_USES_WINDOWS
+		SAMPLE_RENDER_GRAPHICS_API_D3D12,
+#endif //D3D12_GUARD
 	};
 
 	class SAMPLE_RENDER_DLL_COMMAND GraphicsContext
 	{
 	public:
 
-		virtual void ClearFrameBuffer() = 0;
 		virtual void SetClearColor(float r, float g, float b, float a) = 0;
 
 		virtual void ReceiveCommands() = 0;
@@ -30,6 +33,6 @@ namespace SampleRender
 
 		virtual void WindowResize(uint32_t width, uint32_t height) = 0;
 
-		static GraphicsContext* Instantiate(uint32_t width, uint32_t height, std::any windowHandle, uint32_t framesInFlight = 3);
+		static GraphicsContext* Instantiate(const Window* window, uint32_t framesInFlight = 3);
 	};
 }

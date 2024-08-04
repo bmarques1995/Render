@@ -11,13 +11,14 @@
 SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
 bool SampleRender::Application::s_SingletonEnabled = false;
 
-SampleRender::Application::Application()
+SampleRender::Application::Application(std::string programLocation) :
+	m_ProgramLocation(programLocation)
 {
-	m_RenderAPI = GraphicsAPI::D3D12;
+	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK;
 	EnableSingleton(this);
 	Console::Init();
 	m_Window.reset(Window::Instantiate());
-	m_Context.reset(GraphicsContext::Instantiate(m_Window->GetWidth(), m_Window->GetHeight(), m_Window->GetNativePointer(), 3));
+	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
 	try
 	{
@@ -57,12 +58,11 @@ void SampleRender::Application::Run()
 			layer->OnUpdate();
 		m_Window->Update();
 		m_Context->ReceiveCommands();
-		m_Context->ClearFrameBuffer();
-		m_Shader->Stage();
-		m_VertexBuffer->Stage();
-		m_IndexBuffer->Stage();
+		//m_Shader->Stage();
+		//m_VertexBuffer->Stage();
+		//m_IndexBuffer->Stage();
 		m_Context->StageViewportAndScissors();
-		m_Context->Draw(m_IndexBuffer->GetCount());
+		//m_Context->Draw(m_IndexBuffer->GetCount());
 		m_Context->DispatchCommands();
 		m_Context->Present();
 	}

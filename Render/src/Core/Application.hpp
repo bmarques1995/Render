@@ -18,7 +18,7 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND Application
 	{
 	public:
-		Application();
+		Application(std::string programLocation);
 		~Application();
 
 		void Run();
@@ -28,6 +28,8 @@ namespace SampleRender
 			return m_RenderAPI;
 		}
 		
+		inline const std::string& GetProgramPath() { return m_ProgramLocation; }
+
 		static void EnableSingleton(Application* ptr);
 		static Application* GetInstance();
 
@@ -56,6 +58,7 @@ namespace SampleRender
 		//TestLayer* m_TestLayer;
 		GraphicsAPI m_RenderAPI;
 
+		std::string m_ProgramLocation;
 		std::shared_ptr<Compiler> m_CSOCompiler;
 		std::shared_ptr<Compiler> m_SPVCompiler;
 		static Application* s_AppSingleton;

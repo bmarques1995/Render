@@ -3,16 +3,19 @@
 #ifdef RENDER_USES_WINDOWS
 #include "D3D12Context.hpp"
 #endif
+#include "VKContext.hpp"
 
-SampleRender::GraphicsContext* SampleRender::GraphicsContext::Instantiate( uint32_t width, uint32_t height, std::any windowHandle, uint32_t framesInFlight)
+SampleRender::GraphicsContext* SampleRender::GraphicsContext::Instantiate(const Window* window, uint32_t framesInFlight)
 {
 	GraphicsAPI api = Application::GetInstance()->GetCurrentAPI();
 	switch (api)
 	{
 #ifdef RENDER_USES_WINDOWS
-	case SampleRender::D3D12:
-		return new D3D12Context(width, height, std::any_cast<HWND>(windowHandle), framesInFlight);
+	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_D3D12:
+		return new D3D12Context(window, framesInFlight);
 #endif
+	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_VK:
+		return new VKContext(window, framesInFlight);
 	default:
 		break;
 	}

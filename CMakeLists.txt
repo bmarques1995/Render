@@ -6,6 +6,7 @@ cmake_minimum_required (VERSION 3.22)
 project ("SampleRender")
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+option(REGISTER_VULKAN_LAYERS "Set vulkan layers location on regedit" OFF)
 
 # Habilite a Recarga Dinâmica para compiladores MSVC, se houver suporte.
 if (POLICY CMP0141)

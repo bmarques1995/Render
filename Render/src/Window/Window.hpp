@@ -13,8 +13,10 @@ namespace SampleRender
 	public:
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
-		virtual std::any GetNativePointer() = 0;
+		virtual std::any GetNativePointer() const = 0;
+		virtual std::any GetInstance() const = 0;
 		virtual bool ShouldClose() const = 0;
+		virtual const bool* TrackWindowClosing() const = 0;
 		virtual bool IsMinimized() const = 0;
 		virtual void Update() = 0;
 		virtual void ConnectResizer(std::function<void(uint32_t, uint32_t)> resizer) = 0;

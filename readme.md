@@ -26,3 +26,7 @@ and the project will be built.
 Disclaimer: all the installers will be run at first time by cmake, so, the first build will take a several time,
 and they will be build and install all programs. But, if the dependencies are installed in the prefix_path, the build
 will be quick.
+
+Disclaimer 2: you will need admin privileges on windows to run the vulkan version, it will record in HKEY_LOCAL_MACHINE,
+the validation layer and the extensions, that requires the admin privilege, by default, this option will be disabled,
+if you want to set the vulkan layers location in regedit, just run `cmake --preset <preset_name> -DREGISTER_VULKAN_LAYERS=ON`

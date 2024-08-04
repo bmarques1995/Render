@@ -13,7 +13,7 @@ SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<Gr
 	switch (api)
 	{
 #ifdef RENDER_USES_WINDOWS
-	case SampleRender::D3D12:
+	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_D3D12:
 	{
 		controller_path << ".d3d12.json";
 		std::string json_controller_path = controller_path.str();

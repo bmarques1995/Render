@@ -22,12 +22,22 @@ trace_dependency(NAME VulkanLoader INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/install
 trace_dependency(NAME Spirv-Headers INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/spirv_headers.ps1")
 trace_dependency(NAME SPIRV-Tools INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/spirv_tools.ps1")
 trace_dependency(NAME Eigen3 INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/eigen.ps1")
+
 trace_installable_file(NAME "VkLayer_khronos_shader_object" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_extensions.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
 trace_installable_file(NAME "VkLayer_khronos_shader_object" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_extensions.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
 trace_installable_file(NAME "VkLayer_khronos_synchronization2" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_extensions.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
 trace_installable_file(NAME "VkLayer_khronos_synchronization2" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_extensions.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
+
+if(REGISTER_VULKAN_LAYERS)
+
+	file(GLOB LAYER_FILES "${CMAKE_INSTALL_PREFIX}/bin/VkLayer_khronos_*.json")
+
+	list(JOIN LAYER_FILES "|" LAYER_FILES_STR)
+
+	execute_process(COMMAND powershell -File "${PROJECT_SOURCE_DIR}/installers/vulkan_regedit.ps1" ${LAYER_FILES_STR})
+	endif()
 
 endif()
 
@@ -40,7 +50,9 @@ target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRE
 if(WIN32)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Window/Win32>)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/D3D12>)
+target_compile_definitions(${TARGET_NAME} PRIVATE VK_PROTOTYPES VK_USE_PLATFORM_WIN32_KHR)
 endif()
+target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/VK>)
 target_link_libraries(${TARGET_NAME} PUBLIC ShaderManager jsoncpp_lib Eigen3::Eigen PRIVATE ${CMAKE_PREFIX_PATH}/lib/dxcompiler.lib)
 set_cxx_project_standards(${TARGET_NAME} 20 FALSE)
 
@@ -66,7 +78,7 @@ if(WIN32)
 	endif()
 	add_dependencies(${TARGET_NAME} copy_d3d12)
 	
-	target_compile_definitions(${TARGET_NAME} PUBLIC WIN32_LEAN_AND_MEAN RENDER_USES_WINDOWS NOMINMAX)
+	target_compile_definitions(${TARGET_NAME} PUBLIC WIN32_LEAN_AND_MEAN RENDER_USES_WINDOWS NOMINMAX VK_USE_PLATFORM_WIN32_KHR)
 
 	find_library(D3D12_FOUND NAMES d3d12 REQUIRED)
 	find_library(DXGI_FOUND NAMES dxgi REQUIRED)
@@ -74,6 +86,7 @@ if(WIN32)
 
 	target_link_libraries(${TARGET_NAME} PUBLIC d3d12 dxgi dxguid)
 endif()
+target_link_libraries(${TARGET_NAME} PUBLIC Vulkan::Headers Vulkan::Loader)
 if(BUILD_SHARED_LIBS)
 	if(WIN32)
 		target_compile_definitions(${TARGET_NAME} PRIVATE SAMPLE_RENDER_DLL_MACRO_EXPORT)

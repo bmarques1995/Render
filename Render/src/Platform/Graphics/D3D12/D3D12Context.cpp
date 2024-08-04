@@ -3,7 +3,7 @@
 #include "D3D12Context.hpp"
 #include <cassert>
 
-SampleRender::D3D12Context::D3D12Context(uint32_t width, uint32_t height, HWND windowHandle, uint32_t framesInFlight) :
+SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t framesInFlight) :
 	m_FramesInFlight(framesInFlight)
 {
 	SetClearColor(.0f, .5f, .25f, 1.0f);
@@ -16,8 +16,8 @@ SampleRender::D3D12Context::D3D12Context(uint32_t width, uint32_t height, HWND w
 	CreateAdapter();
 	CreateDevice();
 	CreateCommandQueue();
-	CreateViewportAndScissor(width, height);
-	CreateSwapChain(windowHandle);
+	CreateViewportAndScissor(windowHandle->GetWidth(), windowHandle->GetHeight());
+	CreateSwapChain(std::any_cast<HWND>(windowHandle->GetNativePointer()));
 	CreateRenderTargetView();
 	CreateCommandAllocator();
 	CreateCommandList();
@@ -25,18 +25,12 @@ SampleRender::D3D12Context::D3D12Context(uint32_t width, uint32_t height, HWND w
 
 SampleRender::D3D12Context::~D3D12Context()
 {
+	delete[] m_CommandAllocators;
+	delete[] m_RenderTargets;
+	delete[] m_RTVHandles;
 #ifdef RENDER_DEBUG_MODE
 	DisableDebug();
 #endif
-}
-
-void SampleRender::D3D12Context::ClearFrameBuffer()
-{
-	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
-	auto rtvHandle = m_RTVHandles[m_CurrentBufferIndex];
-
-	m_CommandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
-	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
 }
 
 void SampleRender::D3D12Context::SetClearColor(float r, float g, float b, float a)
@@ -62,6 +56,10 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
+	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
+
+	m_CommandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
 }
 
 void SampleRender::D3D12Context::DispatchCommands()
@@ -86,8 +84,8 @@ void SampleRender::D3D12Context::DispatchCommands()
 
 	FlushQueue();
 
-	m_CommandAllocator->Reset();
-	m_CommandList->Reset(m_CommandAllocator.Get(), nullptr);
+	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
+	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
 }
 
 void SampleRender::D3D12Context::Present()
@@ -246,12 +244,18 @@ void SampleRender::D3D12Context::CreateRenderTargetView()
 
 void SampleRender::D3D12Context::CreateCommandAllocator()
 {
-	m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_CommandAllocator));
+	m_CommandAllocators = new ComPointer<ID3D12CommandAllocator>[m_FramesInFlight];
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CommandAllocators[i].GetAddressOf()));
+	}
+	
 }
 
 void SampleRender::D3D12Context::CreateCommandList()
 {
-	m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_CommandList));
+	
+	m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&m_CommandList));
 }
 
 void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32_t height)
@@ -271,9 +275,11 @@ void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32
 
 void SampleRender::D3D12Context::GetTargets()
 {
+	HRESULT hr;
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 	{
-		m_SwapChain->GetBuffer(i, IID_PPV_ARGS(m_RenderTargets[i].GetAddressOf()));
+		hr = m_SwapChain->GetBuffer(i, IID_PPV_ARGS(m_RenderTargets[i].GetAddressOf()));
+		assert(hr == S_OK);
 		m_Device->CreateRenderTargetView(m_RenderTargets[i].Get(), nullptr, m_RTVHandles[i]);
 	}
 }

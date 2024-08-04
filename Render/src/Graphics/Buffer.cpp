@@ -11,7 +11,7 @@ SampleRender::VertexBuffer* SampleRender::VertexBuffer::Instantiate(const std::s
 	switch (api)
 	{
 #ifdef RENDER_USES_WINDOWS
-	case SampleRender::D3D12:
+	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_D3D12:
 	{
 		return new D3D12VertexBuffer((const std::shared_ptr<D3D12Context>*)(context), data, size, stride);
 	}
@@ -28,7 +28,7 @@ SampleRender::IndexBuffer* SampleRender::IndexBuffer::Instantiate(const std::sha
 	switch (api)
 	{
 #ifdef RENDER_USES_WINDOWS
-	case SampleRender::D3D12:
+	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_D3D12:
 	{
 		return new D3D12IndexBuffer((const std::shared_ptr<D3D12Context>*)(context), data, count);
 	}

@@ -1,4 +1,5 @@
 #include "Win32Window.hpp"
+#include <mutex>
 
 #ifdef RENDER_USES_WINDOWS
 
@@ -58,9 +59,19 @@ uint32_t SampleRender::Win32Window::GetHeight() const
 	return m_Height;
 }
 
-std::any SampleRender::Win32Window::GetNativePointer()
+std::any SampleRender::Win32Window::GetNativePointer() const
 {
 	return m_WindowHandle;
+}
+
+std::any SampleRender::Win32Window::GetInstance() const
+{
+	return m_WindowClass.hInstance;
+}
+
+const bool* SampleRender::Win32Window::TrackWindowClosing() const
+{
+	return &m_ShouldClose;
 }
 
 bool SampleRender::Win32Window::ShouldClose() const
@@ -130,8 +141,13 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 	{
 	case WM_CLOSE:
 	case WM_QUIT:
+	{
+		std::mutex locker;
+		locker.lock();
 		window->m_ShouldClose = true;
+		locker.unlock();
 		break;
+	}
 	case WM_SIZE:
 	{
 		switch (wParam)

@@ -19,10 +19,10 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND D3D12Context : public GraphicsContext
 	{
 	public:
-		D3D12Context(uint32_t width, uint32_t height, HWND windowHandle, uint32_t framesInFlight);
+		D3D12Context(const Window* windowHandle, uint32_t framesInFlight);
 		~D3D12Context();
 
-		void ClearFrameBuffer() override;
+
 		void SetClearColor(float r, float g, float b, float a) override;
 
 		void ReceiveCommands() override;
@@ -83,7 +83,7 @@ namespace SampleRender
 		uint32_t m_FramesInFlight;
 		float m_ClearColor[4];
 
-		ComPointer<ID3D12CommandAllocator> m_CommandAllocator;
+		ComPointer<ID3D12CommandAllocator>* m_CommandAllocators;
 		ComPointer<ID3D12GraphicsCommandList6> m_CommandList;
 
 		UINT m_CurrentBufferIndex = -1;

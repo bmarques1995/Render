@@ -21,7 +21,9 @@ namespace SampleRender
 
 		uint32_t GetWidth() const override;
 		uint32_t GetHeight() const override;
-		std::any GetNativePointer() override;
+		std::any GetNativePointer() const override;
+		std::any GetInstance() const override;
+		virtual const bool* TrackWindowClosing() const override;
 		bool ShouldClose() const override;
 		bool IsMinimized() const override;
 		void Update() override;
