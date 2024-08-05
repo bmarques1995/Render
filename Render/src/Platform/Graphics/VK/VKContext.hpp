@@ -42,6 +42,10 @@ namespace SampleRender
 		const std::string GetGPUName() override;
 
 		void WindowResize(uint32_t width, uint32_t height) override;
+
+		VkDevice GetDevice() const;
+		VkRenderPass GetRenderPass() const;
+		VkCommandBuffer GetCurrentCommandBuffer() const;
 	private:
 		
 		//Master

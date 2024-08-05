@@ -27,10 +27,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
 
-	Json::Reader reader;
-	std::string jsonResult;
-	FileHandler::ReadTextFile(json_controller_path, &jsonResult);
-	reader.parse(jsonResult, m_PipelineInfo);
+	InitJsonAndPaths(json_controller_path);
 
 	auto nativeElements = m_Layout.GetElements();
 	D3D12_INPUT_ELEMENT_DESC *ied = new D3D12_INPUT_ELEMENT_DESC[nativeElements.size()];
@@ -58,13 +55,11 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.NumRenderTargets = 1;
 	graphicsDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
 	graphicsDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-	//Pelo amor de Deus, não esquece de mim
 	graphicsDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	graphicsDesc.SampleDesc.Count = 1;
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	
-	fs::path location = json_controller_path;
-	m_ShaderDir = location.parent_path().string();
+	
 
 	for (auto it = s_GraphicsPipelineStages.begin(); it != s_GraphicsPipelineStages.end(); it++)
 	{
@@ -238,9 +233,7 @@ void SampleRender::D3D12Shader::PushShader(std::string_view stage, D3D12_GRAPHIC
 	// Create blob from memory
 	ComPointer<IDxcBlob> pBlob;
 	hr = lib->CreateBlob((void*) blobData, blobSize, DXC_CP_ACP, (IDxcBlobEncoding**)pBlob.GetAddressOf());
-	if (FAILED(hr)) {
-		return;
-	}
+	assert(hr == S_OK);
 	m_ShaderBlobs[stage.data()] = pBlob;
 	
 	auto it = s_ShaderPusher.find(stage.data());
@@ -248,6 +241,17 @@ void SampleRender::D3D12Shader::PushShader(std::string_view stage, D3D12_GRAPHIC
 		it->second(m_ShaderBlobs[stage.data()].GetAddressOf(), graphicsDesc);
 
 	delete[] blobData;
+}
+
+void SampleRender::D3D12Shader::InitJsonAndPaths(std::string json_controller_path)
+{
+	Json::Reader reader;
+	std::string jsonResult;
+	FileHandler::ReadTextFile(json_controller_path, &jsonResult);
+	reader.parse(jsonResult, m_PipelineInfo);
+
+	fs::path location = json_controller_path;
+	m_ShaderDir = location.parent_path().string();
 }
 
 DXGI_FORMAT SampleRender::D3D12Shader::GetNativeFormat(ShaderDataType type)

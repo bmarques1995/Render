@@ -26,6 +26,7 @@ namespace SampleRender
 		void BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
+		void InitJsonAndPaths(std::string json_controller_path);
 
 		static DXGI_FORMAT GetNativeFormat(ShaderDataType type);
 		static const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> s_ShaderPusher;

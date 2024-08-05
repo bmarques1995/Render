@@ -231,6 +231,21 @@ void SampleRender::VKContext::WindowResize(uint32_t width, uint32_t height)
     RecreateSwapChain();
 }
 
+VkDevice SampleRender::VKContext::GetDevice() const
+{
+    return m_Device;
+}
+
+VkRenderPass SampleRender::VKContext::GetRenderPass() const
+{
+    return m_RenderPass;
+}
+
+VkCommandBuffer SampleRender::VKContext::GetCurrentCommandBuffer() const
+{
+    return m_CommandBuffers[m_CurrentBufferIndex];
+}
+
 void SampleRender::VKContext::CreateInstance()
 {
     VkResult vkr;

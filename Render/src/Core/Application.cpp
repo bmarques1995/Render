@@ -14,7 +14,7 @@ bool SampleRender::Application::s_SingletonEnabled = false;
 SampleRender::Application::Application(std::string programLocation) :
 	m_ProgramLocation(programLocation)
 {
-	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_D3D12;
+	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK;
 	EnableSingleton(this);
 	Console::Init();
 	m_Window.reset(Window::Instantiate());
@@ -59,10 +59,10 @@ void SampleRender::Application::Run()
 		m_Window->Update();
 		m_Context->ReceiveCommands();
 		m_Shader->Stage();
-		m_VertexBuffer->Stage();
-		m_IndexBuffer->Stage();
+		//m_VertexBuffer->Stage();
+		//m_IndexBuffer->Stage();
 		m_Context->StageViewportAndScissors();
-		m_Context->Draw(m_IndexBuffer->GetCount());
+		//m_Context->Draw(m_IndexBuffer->GetCount());
 		m_Context->DispatchCommands();
 		m_Context->Present();
 	}

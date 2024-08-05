@@ -55,6 +55,8 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	rtSetupBarrier.Transition.Subresource = 0;
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
+	//m_CommandList->BeginRenderPass();
+
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
 	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 

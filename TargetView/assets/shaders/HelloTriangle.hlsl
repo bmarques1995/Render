@@ -2,8 +2,8 @@
 
 struct VSInput
 {
-	float3 pos : POSITION;
-	float4 col : COLOR;
+    [[vk::location(0)]]float3 pos : POSITION;
+    [[vk::location(1)]]float4 col : COLOR;
 };
 
 struct PSInput
@@ -22,6 +22,5 @@ PSInput vs_main(VSInput vsInput)
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-	
 	return psInput.col;
 }
