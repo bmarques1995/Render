@@ -49,6 +49,7 @@ namespace SampleRender
 		void CreateCommandAllocator();
 		void CreateCommandList();
 		void CreateViewportAndScissor(uint32_t width, uint32_t height);
+		void CreateDepthStencilView();
 
 		void GetTargets();
 		void FlushQueue(size_t flushCount = 1);
@@ -80,6 +81,9 @@ namespace SampleRender
 		ComPointer<ID3D12Resource2>* m_RenderTargets;
 		ComPointer<ID3D12DescriptorHeap> m_RTVHeap;
 		D3D12_CPU_DESCRIPTOR_HANDLE* m_RTVHandles;
+		ComPointer<ID3D12DescriptorHeap> m_DSVHeap;
+		ComPointer<ID3D12Resource2> m_DepthStencilView;
+		D3D12_CPU_DESCRIPTOR_HANDLE m_DSVHandle;
 		uint32_t m_FramesInFlight;
 		float m_ClearColor[4];
 

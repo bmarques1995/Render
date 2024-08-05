@@ -109,6 +109,11 @@ namespace SampleRender
 		void CleanupFramebuffers();
 
 		//Master
+		void CreateDepthStencilView();
+		//Master
+		void CleanupDepthStencilView();
+
+		//Master
 		void CreateCommandPool();
 		//Master
 		void CreateCommandBuffers();
@@ -133,6 +138,10 @@ namespace SampleRender
 		VkRenderPass m_RenderPass;
 		VkFramebuffer* m_SwapChainFramebuffers;
 		
+		VkImage m_DepthStencilBuffer;
+		VkDeviceMemory m_DepthStencilMemory;
+		VkImageView m_DepthStencilView;
+
 		const bool* m_IsWindowClosing;
 
 		VkCommandPool m_CommandPool;

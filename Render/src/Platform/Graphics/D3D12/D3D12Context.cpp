@@ -19,6 +19,7 @@ SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t fr
 	CreateViewportAndScissor(windowHandle->GetWidth(), windowHandle->GetHeight());
 	CreateSwapChain(std::any_cast<HWND>(windowHandle->GetNativePointer()));
 	CreateRenderTargetView();
+	CreateDepthStencilView();
 	CreateCommandAllocator();
 	CreateCommandList();
 }
@@ -60,8 +61,10 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
 	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	m_CommandList->OMSetRenderTargets(1, &rtvHandle, false, nullptr);
+	m_CommandList->OMSetRenderTargets(1, &rtvHandle, false, &m_DSVHandle);
 	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
+	m_CommandList->OMSetDepthBounds(.0f, 1.0f);
+	m_CommandList->ClearDepthStencilView(m_DSVHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 
 void SampleRender::D3D12Context::DispatchCommands()
@@ -129,11 +132,13 @@ const std::string SampleRender::D3D12Context::GetGPUName()
 void SampleRender::D3D12Context::WindowResize(uint32_t width, uint32_t height)
 {
 	FlushQueue(m_FramesInFlight);
+	CreateViewportAndScissor(width, height);
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 		m_RenderTargets[i].Release();
 	m_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
 	GetTargets();
-	CreateViewportAndScissor(width, height);
+	m_DepthStencilView.Release();
+	CreateDepthStencilView();
 }
 
 void SampleRender::D3D12Context::CreateFactory()
@@ -192,8 +197,8 @@ void SampleRender::D3D12Context::CreateCommandQueue()
 void SampleRender::D3D12Context::CreateSwapChain(HWND windowHandle)
 {
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc{};
-	swapChainDesc.Width = (uint32_t)m_Viewport.Width;
-	swapChainDesc.Height = (uint32_t)m_Viewport.Height;
+	swapChainDesc.Width = (uint32_t)m_ScissorRect.right;
+	swapChainDesc.Height = (uint32_t)m_ScissorRect.bottom;
 	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	swapChainDesc.Stereo = FALSE;
 	swapChainDesc.SampleDesc.Count = 1;
@@ -273,6 +278,63 @@ void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32
 	m_ScissorRect.right = (long)width;
 	m_ScissorRect.top = 0;
 	m_ScissorRect.bottom = (long)height;
+}
+
+void SampleRender::D3D12Context::CreateDepthStencilView()
+{
+	HRESULT hr;
+
+	// === Retrive RTV & Buffers ===
+
+	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc{};
+	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	rtvDescriptorHeapDesc.NumDescriptors = m_FramesInFlight;
+	rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	rtvDescriptorHeapDesc.NodeMask = 0;
+
+	m_Device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(m_DSVHeap.GetAddressOf()));
+
+	D3D12_CPU_DESCRIPTOR_HANDLE dsvHeapStartHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+	m_DSVHandle = { dsvHeapStartHandle.ptr };
+
+	D3D12_RESOURCE_DESC depthStencilDesc = {};
+	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	depthStencilDesc.Width = m_ScissorRect.right;
+	depthStencilDesc.Height = m_ScissorRect.bottom;
+	depthStencilDesc.DepthOrArraySize = 1;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+	D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+	depthOptimizedClearValue.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+	depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;
+
+	hr = m_Device->CreateCommittedResource(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&depthStencilDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		&depthOptimizedClearValue,
+		IID_PPV_ARGS(m_DepthStencilView.GetAddressOf()));
+	assert(hr == S_OK);
+
+	// Create the depth/stencil view
+	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+	dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+	dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+	m_Device->CreateDepthStencilView(m_DepthStencilView.Get(), &dsvDesc, m_DSVHandle);
 }
 
 void SampleRender::D3D12Context::GetTargets()

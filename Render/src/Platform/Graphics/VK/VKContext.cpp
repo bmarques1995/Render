@@ -64,6 +64,7 @@ SampleRender::VKContext::VKContext(const Window* windowHandle, uint32_t framesIn
     CreateSwapChain();
     CreateImageView();
     CreateRenderPass();
+    CreateDepthStencilView();
     CreateFramebuffers();
     CreateCommandPool();
     CreateCommandBuffers();
@@ -602,11 +603,13 @@ void SampleRender::VKContext::CleanupSwapChain()
 void SampleRender::VKContext::RecreateSwapChain()
 {
     CleanupFramebuffers();
+    CleanupDepthStencilView();
     CleanupImageView();
     CleanupSwapChain();
 
     CreateSwapChain();
     CreateImageView();
+    CreateDepthStencilView();
     CreateFramebuffers();
 }
 
@@ -695,7 +698,8 @@ void SampleRender::VKContext::CreateFramebuffers()
 
     for (size_t i = 0; i < m_SwapChainImageCount; i++) {
         VkImageView attachments[] = {
-            m_SwapChainImageViews[i]
+            m_SwapChainImageViews[i],
+            m_DepthStencilView
         };
 
         VkFramebufferCreateInfo framebufferInfo{};
@@ -719,6 +723,73 @@ void SampleRender::VKContext::CleanupFramebuffers()
         vkDestroyFramebuffer(m_Device, m_SwapChainFramebuffers[i], nullptr);
     }
     delete[] m_SwapChainFramebuffers;
+}
+
+void SampleRender::VKContext::CreateDepthStencilView()
+{
+    VkResult vkr;
+
+    VkImageCreateInfo imageInfo{};
+    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageInfo.extent.width = m_SwapChainExtent.width;
+    imageInfo.extent.height = m_SwapChainExtent.height;
+    imageInfo.extent.depth = 1;
+    imageInfo.mipLevels = 1;
+    imageInfo.arrayLayers = 1;
+    imageInfo.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+  
+    vkr = vkCreateImage(m_Device, &imageInfo, nullptr, &m_DepthStencilBuffer);
+    (vkr == VK_SUCCESS);
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(m_Device, m_DepthStencilBuffer, &memRequirements);
+
+    VkPhysicalDeviceMemoryProperties memProperties;
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = 0xffffffffu;
+        
+    vkGetPhysicalDeviceMemoryProperties(m_Adapter, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+            allocInfo.memoryTypeIndex = i;
+        }
+    }
+        
+
+    vkr = vkAllocateMemory(m_Device, &allocInfo, nullptr, &m_DepthStencilMemory);
+    assert(vkr == VK_SUCCESS);
+
+    vkBindImageMemory(m_Device, m_DepthStencilBuffer, m_DepthStencilMemory, 0);
+  
+    VkImageViewCreateInfo viewInfo{};
+    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    viewInfo.image = m_DepthStencilBuffer;
+    viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    viewInfo.format = VK_FORMAT_D24_UNORM_S8_UINT;
+    viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    viewInfo.subresourceRange.baseMipLevel = 0;
+    viewInfo.subresourceRange.levelCount = 1;
+    viewInfo.subresourceRange.baseArrayLayer = 0;
+    viewInfo.subresourceRange.layerCount = 1;
+
+    vkr = vkCreateImageView(m_Device, &viewInfo, nullptr, &m_DepthStencilView);
+    assert(vkr == VK_SUCCESS);
+}
+
+void SampleRender::VKContext::CleanupDepthStencilView()
+{
+    vkDestroyImageView(m_Device, m_DepthStencilView, nullptr);
+    vkDestroyImage(m_Device, m_DepthStencilBuffer, nullptr);
+    vkFreeMemory(m_Device, m_DepthStencilMemory, nullptr);
 }
 
 void SampleRender::VKContext::CreateCommandPool()
