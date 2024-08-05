@@ -122,11 +122,10 @@ void SampleRender::Win32Window::AdjustDimensions(LPRECT windowDimensions)
 
 void SampleRender::Win32Window::ApplyWindowResize(WPARAM wParam, LPRECT newDimensions)
 {
-	RECT windowDimensions = { 0, 0, (LONG)m_Width, (LONG)m_Height };
-	int32_t deltaWidth = (newDimensions->right - newDimensions->left) - (windowDimensions.right - windowDimensions.left);
-	int32_t deltaHeight = (newDimensions->bottom - newDimensions->top) - (windowDimensions.bottom - windowDimensions.top);
+	m_Width = (newDimensions->right - newDimensions->left);
+	m_Height = (newDimensions->bottom - newDimensions->top);
 	if(m_Resizer)
-		m_Resizer((m_Width + deltaWidth), (m_Height + deltaHeight));
+		m_Resizer(m_Width, m_Height);
 }
 
 LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -149,6 +148,7 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 	}
 	case WM_SIZE:
 	{
+		RECT newDims = { 0,0, LOWORD(lParam), HIWORD(lParam) };
 		switch (wParam)
 		{
 		case SIZE_MINIMIZED:
@@ -158,7 +158,8 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 		}
 		case SIZE_MAXIMIZED:
 		{
-			window->ApplyWindowResize(wParam, (LPRECT)lParam);
+			window->m_Maximized = true;
+			window->ApplyWindowResize(wParam, &newDims);
 			break;
 		}
 		case SIZE_RESTORED:
@@ -167,7 +168,8 @@ LRESULT SampleRender::Win32Callback::WindowResizer(HWND hWnd, UINT msg, WPARAM w
 				window->m_Minimized = false;
 			if (window->m_Maximized)
 			{
-				window->ApplyWindowResize(wParam, (LPRECT)lParam);
+				window->ApplyWindowResize(wParam, &newDims);
+				window->m_Maximized = false;
 			}
 			break;
 		}
