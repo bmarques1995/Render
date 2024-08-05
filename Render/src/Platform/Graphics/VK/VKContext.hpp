@@ -43,6 +43,9 @@ namespace SampleRender
 
 		void WindowResize(uint32_t width, uint32_t height) override;
 
+		VkCommandPool GetCommandPool() const;
+		VkQueue GetGraphicsQueue() const;
+		VkPhysicalDevice GetAdapter() const;
 		VkDevice GetDevice() const;
 		VkRenderPass GetRenderPass() const;
 		VkCommandBuffer GetCurrentCommandBuffer() const;

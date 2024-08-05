@@ -231,6 +231,21 @@ void SampleRender::VKContext::WindowResize(uint32_t width, uint32_t height)
     RecreateSwapChain();
 }
 
+VkCommandPool SampleRender::VKContext::GetCommandPool() const
+{
+    return m_CommandPool;
+}
+
+VkQueue SampleRender::VKContext::GetGraphicsQueue() const
+{
+    return m_GraphicsQueue;
+}
+
+VkPhysicalDevice SampleRender::VKContext::GetAdapter() const
+{
+    return m_Adapter;
+}
+
 VkDevice SampleRender::VKContext::GetDevice() const
 {
     return m_Device;
