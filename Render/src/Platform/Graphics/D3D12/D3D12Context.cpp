@@ -201,13 +201,13 @@ void SampleRender::D3D12Context::CreateSwapChain(HWND windowHandle)
 	swapChainDesc.BufferUsage = DXGI_USAGE_BACK_BUFFER;
 	swapChainDesc.BufferCount = m_FramesInFlight;
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc{};
-	fullscreenDesc.RefreshRate.Denominator = 0;
-	fullscreenDesc.RefreshRate.Numerator = 0;
+	fullscreenDesc.RefreshRate.Denominator = 120;
+	fullscreenDesc.RefreshRate.Numerator = 1;
 	fullscreenDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
 	fullscreenDesc.Scaling = DXGI_MODE_SCALING_STRETCHED;
 	fullscreenDesc.Windowed = TRUE;

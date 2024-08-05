@@ -14,7 +14,7 @@ bool SampleRender::Application::s_SingletonEnabled = false;
 SampleRender::Application::Application(std::string programLocation) :
 	m_ProgramLocation(programLocation)
 {
-	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK;
+	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_D3D12;
 	EnableSingleton(this);
 	Console::Init();
 	m_Window.reset(Window::Instantiate());
