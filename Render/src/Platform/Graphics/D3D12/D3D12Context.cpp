@@ -61,10 +61,11 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
 	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	m_CommandList->OMSetRenderTargets(1, &rtvHandle, false, &m_DSVHandle);
-	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
-	m_CommandList->OMSetDepthBounds(.0f, 1.0f);
 	m_CommandList->ClearDepthStencilView(m_DSVHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
+	m_CommandList->OMSetRenderTargets(1, &rtvHandle, true, &m_DSVHandle);
+	m_CommandList->OMSetDepthBounds(.0f, 1.0f);
+	
 }
 
 void SampleRender::D3D12Context::DispatchCommands()
@@ -107,6 +108,7 @@ void SampleRender::D3D12Context::StageViewportAndScissors()
 void SampleRender::D3D12Context::Draw(uint32_t elements)
 {
 	m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 	m_CommandList->DrawIndexedInstanced(elements, 1, 0, 0, 0);
 }
 
@@ -286,13 +288,14 @@ void SampleRender::D3D12Context::CreateDepthStencilView()
 
 	// === Retrive RTV & Buffers ===
 
-	D3D12_DESCRIPTOR_HEAP_DESC rtvDescriptorHeapDesc{};
-	rtvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	rtvDescriptorHeapDesc.NumDescriptors = m_FramesInFlight;
-	rtvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	rtvDescriptorHeapDesc.NodeMask = 0;
+	D3D12_DESCRIPTOR_HEAP_DESC dsvDescriptorHeapDesc{};
+	dsvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	dsvDescriptorHeapDesc.NumDescriptors = 1;
+	dsvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	dsvDescriptorHeapDesc.NodeMask = 0;
 
-	m_Device->CreateDescriptorHeap(&rtvDescriptorHeapDesc, IID_PPV_ARGS(m_DSVHeap.GetAddressOf()));
+	hr = m_Device->CreateDescriptorHeap(&dsvDescriptorHeapDesc, IID_PPV_ARGS(m_DSVHeap.GetAddressOf()));
+	assert(hr == S_OK);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHeapStartHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 	m_DSVHandle = { dsvHeapStartHandle.ptr };

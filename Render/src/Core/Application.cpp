@@ -57,14 +57,17 @@ void SampleRender::Application::Run()
 		for (Layer* layer : m_LayerStack)
 			layer->OnUpdate();
 		m_Window->Update();
-		m_Context->ReceiveCommands();
-		m_Shader->Stage();
-		m_VertexBuffer->Stage();
-		m_IndexBuffer->Stage();
-		m_Context->StageViewportAndScissors();
-		m_Context->Draw(m_IndexBuffer->GetCount());
-		m_Context->DispatchCommands();
-		m_Context->Present();
+		if (!m_Window->IsMinimized())
+		{
+			m_Context->ReceiveCommands();
+			m_Shader->Stage();
+			m_VertexBuffer->Stage();
+			m_IndexBuffer->Stage();
+			m_Context->StageViewportAndScissors();
+			m_Context->Draw(m_IndexBuffer->GetCount());
+			m_Context->DispatchCommands();
+			m_Context->Present();
+		}
 	}
 }
 

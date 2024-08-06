@@ -54,7 +54,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.SampleMask = UINT_MAX;
 	graphicsDesc.NumRenderTargets = 1;
 	graphicsDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	graphicsDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+	graphicsDesc.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	graphicsDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 	graphicsDesc.SampleDesc.Count = 1;
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
@@ -201,10 +201,10 @@ void SampleRender::D3D12Shader::BuildRasterizer(D3D12_GRAPHICS_PIPELINE_STATE_DE
 
 void SampleRender::D3D12Shader::BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)
 {
-	graphicsDesc->DepthStencilState.DepthEnable = false;
+	graphicsDesc->DepthStencilState.DepthEnable = true;
 	graphicsDesc->DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-	graphicsDesc->DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	graphicsDesc->DepthStencilState.StencilEnable = false;
+	graphicsDesc->DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+	graphicsDesc->DepthStencilState.StencilEnable = true;
 	graphicsDesc->DepthStencilState.FrontFace.StencilFailOp = graphicsDesc->DepthStencilState.FrontFace.StencilDepthFailOp = graphicsDesc->DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
 	graphicsDesc->DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 	graphicsDesc->DepthStencilState.BackFace = graphicsDesc->DepthStencilState.FrontFace;
