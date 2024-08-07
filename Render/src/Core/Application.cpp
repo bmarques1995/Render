@@ -16,7 +16,6 @@ SampleRender::Application::Application(std::string programLocation) :
 {
 	EnableSingleton(this);
 	m_Starter.reset(new ApplicationStarter("render.json"));
-	Console::Init();
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
@@ -47,7 +46,6 @@ SampleRender::Application::Application(std::string programLocation) :
 
 SampleRender::Application::~Application()
 {
-	Console::End();
 }
 
 void SampleRender::Application::Run()

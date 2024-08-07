@@ -19,6 +19,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 int main(int argc, char** argv)
 #endif
 {
+	SampleRender::Console::Init();
 	#ifdef WIN32
 	auto cmdArgs = GetCommandLineA();
 	std::string programPath;
@@ -27,9 +28,9 @@ int main(int argc, char** argv)
 	#else
 	SampleRender::Application* app = new SampleRender::Application(argv[0]);
 	#endif
-
 	app->Run();
 	delete app;
+	SampleRender::Console::End();
 	return 0;
 }
 

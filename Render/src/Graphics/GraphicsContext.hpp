@@ -19,7 +19,7 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND GraphicsContext
 	{
 	public:
-
+		virtual ~GraphicsContext() = default;
 		virtual void SetClearColor(float r, float g, float b, float a) = 0;
 
 		virtual void ReceiveCommands() = 0;

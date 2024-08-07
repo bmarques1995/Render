@@ -11,6 +11,8 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND Window
 	{
 	public:
+		virtual ~Window() = default;
+
 		virtual uint32_t GetWidth() const = 0;
 		virtual uint32_t GetHeight() const = 0;
 		virtual std::any GetNativePointer() const = 0;
