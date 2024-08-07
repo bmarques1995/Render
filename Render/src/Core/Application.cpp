@@ -14,8 +14,8 @@ bool SampleRender::Application::s_SingletonEnabled = false;
 SampleRender::Application::Application(std::string programLocation) :
 	m_ProgramLocation(programLocation)
 {
-	m_RenderAPI = GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK;
 	EnableSingleton(this);
+	m_Starter.reset(new ApplicationStarter("render.json"));
 	Console::Init();
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));

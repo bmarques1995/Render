@@ -13,6 +13,7 @@
 #include "SPVCompiler.hpp"
 #include "Shader.hpp"
 #include "Buffer.hpp"
+#include "ApplicationStarter.hpp"
 
 namespace SampleRender
 {
@@ -26,7 +27,7 @@ namespace SampleRender
 	
 		GraphicsAPI GetCurrentAPI()
 		{
-			return m_RenderAPI;
+			return m_Starter->GetCurrentAPI();
 		}
 		
 		inline const std::string& GetProgramPath() { return m_ProgramLocation; }
@@ -61,11 +62,11 @@ namespace SampleRender
 		
 		LayerStack m_LayerStack;
 		//TestLayer* m_TestLayer;
-		GraphicsAPI m_RenderAPI;
 
 		std::string m_ProgramLocation;
 		std::shared_ptr<CSOCompiler> m_CSOCompiler;
 		std::shared_ptr<SPVCompiler> m_SPVCompiler;
+		std::unique_ptr<ApplicationStarter> m_Starter;
 		static Application* s_AppSingleton;
 		static bool s_SingletonEnabled;
 	};
