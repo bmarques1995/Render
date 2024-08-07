@@ -30,3 +30,11 @@ will be quick.
 Disclaimer 2: you will need admin privileges on windows to run the vulkan version, it will record in HKEY_LOCAL_MACHINE,
 the validation layer and the extensions, that requires the admin privilege, by default, this option will be disabled,
 if you want to set the vulkan layers location in regedit, just run `cmake --preset <preset_name> -DREGISTER_VULKAN_LAYERS=ON`
+
+# Running
+
+The first run, the application will start with the Vulkan API, and a file `render.json` will be generated, in the next run,
+you can edit the json file and edit the graphics API property, with the following string values:
+
+- `SAMPLE_RENDER_GRAPHICS_API_VK`
+- `SAMPLE_RENDER_GRAPHICS_API_D3D12`
