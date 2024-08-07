@@ -274,7 +274,7 @@ void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32
 	m_Viewport.Width = (float)width;
 	m_Viewport.Height = (float)height;
 	m_Viewport.MinDepth = 1.0f;
-	m_Viewport.MaxDepth = 0.0;
+	m_Viewport.MaxDepth = 0.0f;
 
 	m_ScissorRect.left = 0;
 	m_ScissorRect.right = (long)width;

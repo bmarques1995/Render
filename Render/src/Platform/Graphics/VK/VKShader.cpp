@@ -64,10 +64,12 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     VkPipelineRasterizationStateCreateInfo rasterizer{};
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     VkPipelineColorBlendStateCreateInfo colorBlending{};
-    
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+
     SetInputAssemblyViewportAndMultisampling(&inputAssembly, &viewportState, &multisampling);
     SetRasterizer(&rasterizer);
     SetBlend(&colorBlendAttachment, &colorBlending);
+    SetDepthStencil(&depthStencil);
 
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -97,6 +99,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     pipelineInfo.pMultisampleState = &multisampling;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.layout = m_RootSignature;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
@@ -234,6 +237,16 @@ void SampleRender::VKShader::SetBlend(VkPipelineColorBlendAttachmentState* color
     colorBlending->blendConstants[1] = 0.0f;
     colorBlending->blendConstants[2] = 0.0f;
     colorBlending->blendConstants[3] = 0.0f;
+}
+
+void SampleRender::VKShader::SetDepthStencil(VkPipelineDepthStencilStateCreateInfo* depthStencil)
+{
+    depthStencil->sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil->depthTestEnable = VK_TRUE;
+    depthStencil->depthWriteEnable = VK_TRUE;
+    depthStencil->depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    depthStencil->depthBoundsTestEnable = VK_FALSE;
+    depthStencil->stencilTestEnable = VK_FALSE;
 }
 
 VkFormat SampleRender::VKShader::GetNativeFormat(ShaderDataType type)

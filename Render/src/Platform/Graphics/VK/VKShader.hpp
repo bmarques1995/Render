@@ -25,6 +25,7 @@ namespace SampleRender
 		void SetRasterizer(VkPipelineRasterizationStateCreateInfo* rasterizer);
 		void SetInputAssemblyViewportAndMultisampling(VkPipelineInputAssemblyStateCreateInfo* inputAssembly, VkPipelineViewportStateCreateInfo* viewportState, VkPipelineMultisampleStateCreateInfo* multisampling);
 		void SetBlend(VkPipelineColorBlendAttachmentState* colorBlendAttachment, VkPipelineColorBlendStateCreateInfo* colorBlending);
+		void SetDepthStencil(VkPipelineDepthStencilStateCreateInfo* depthStencil);
 
 		static VkFormat GetNativeFormat(ShaderDataType type);
 		static const std::list<std::string> s_GraphicsPipelineStages;
