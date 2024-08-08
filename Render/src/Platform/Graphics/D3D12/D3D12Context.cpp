@@ -36,10 +36,10 @@ SampleRender::D3D12Context::~D3D12Context()
 
 void SampleRender::D3D12Context::SetClearColor(float r, float g, float b, float a)
 {
-	m_ClearColor[0] = r;
-	m_ClearColor[1] = g;
-	m_ClearColor[2] = b;
-	m_ClearColor[3] = a;
+	m_ClearColor.Color[0] = r;
+	m_ClearColor.Color[1] = g;
+	m_ClearColor.Color[2] = b;
+	m_ClearColor.Color[3] = a;
 }
 
 void SampleRender::D3D12Context::ReceiveCommands()
@@ -62,10 +62,7 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDesc = {};
 	renderTargetDesc.cpuDescriptor = rtvHandle;
 	renderTargetDesc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
-	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[0] = m_ClearColor[0];
-	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[1] = m_ClearColor[1];
-	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[2] = m_ClearColor[2];
-	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[3] = m_ClearColor[3];
+	renderTargetDesc.BeginningAccess.Clear.ClearValue = m_ClearColor;
 	renderTargetDesc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 
 	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthStencilDesc = {};
@@ -75,10 +72,7 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	depthStencilDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = 0;
 	depthStencilDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 
-	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
-	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
 	m_CommandList->BeginRenderPass(1, &renderTargetDesc, &depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
-	
 }
 
 void SampleRender::D3D12Context::DispatchCommands()
@@ -93,17 +87,20 @@ void SampleRender::D3D12Context::DispatchCommands()
 	rtSetupBarrier.Transition.Subresource = 0;
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
+	m_CommandList->EndRenderPass();
+
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
 
 	// === Execute commands ===
-	m_CommandList->Close();
-
-	m_CommandList->EndRenderPass();
+	auto hr = m_CommandList->Close();
 
 	ID3D12CommandList* lists[] = { m_CommandList.Get() };
 	m_CommandQueue->ExecuteCommandLists(1, lists);
 
 	FlushQueue();
+
+	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
+	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
 }
 
 void SampleRender::D3D12Context::Present()

@@ -85,7 +85,7 @@ namespace SampleRender
 		ComPointer<ID3D12Resource2> m_DepthStencilView;
 		D3D12_CPU_DESCRIPTOR_HANDLE m_DSVHandle;
 		uint32_t m_FramesInFlight;
-		float m_ClearColor[4];
+		D3D12_CLEAR_VALUE m_ClearColor;
 
 		ComPointer<ID3D12CommandAllocator>* m_CommandAllocators;
 		ComPointer<ID3D12GraphicsCommandList6> m_CommandList;
