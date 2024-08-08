@@ -47,6 +47,7 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 	auto backBuffer = m_RenderTargets[m_CurrentBufferIndex];
 	auto rtvHandle = m_RTVHandles[m_CurrentBufferIndex];
+	auto dsvHandle = m_DSVHandle;
 
 	D3D12_RESOURCE_BARRIER rtSetupBarrier{};
 	rtSetupBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -56,15 +57,27 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	rtSetupBarrier.Transition.Subresource = 0;
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-	//m_CommandList->BeginRenderPass();
-
 	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
-	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
 
-	m_CommandList->ClearDepthStencilView(m_DSVHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-	m_CommandList->ClearRenderTargetView(rtvHandle, m_ClearColor, 0, nullptr);
-	m_CommandList->OMSetRenderTargets(1, &rtvHandle, true, &m_DSVHandle);
-	m_CommandList->OMSetDepthBounds(.0f, 1.0f);
+	D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDesc = {};
+	renderTargetDesc.cpuDescriptor = rtvHandle;
+	renderTargetDesc.BeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[0] = m_ClearColor[0];
+	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[1] = m_ClearColor[1];
+	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[2] = m_ClearColor[2];
+	renderTargetDesc.BeginningAccess.Clear.ClearValue.Color[3] = m_ClearColor[3];
+	renderTargetDesc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+	D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthStencilDesc = {};
+	depthStencilDesc.cpuDescriptor = m_DSVHandle;
+	depthStencilDesc.DepthBeginningAccess.Type = D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR;
+	depthStencilDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth = 1.0f;
+	depthStencilDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = 0;
+	depthStencilDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+
+	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
+	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
+	m_CommandList->BeginRenderPass(1, &renderTargetDesc, &depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
 	
 }
 
@@ -85,13 +98,12 @@ void SampleRender::D3D12Context::DispatchCommands()
 	// === Execute commands ===
 	m_CommandList->Close();
 
+	m_CommandList->EndRenderPass();
+
 	ID3D12CommandList* lists[] = { m_CommandList.Get() };
 	m_CommandQueue->ExecuteCommandLists(1, lists);
 
 	FlushQueue();
-
-	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
-	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
 }
 
 void SampleRender::D3D12Context::Present()
