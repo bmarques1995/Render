@@ -32,6 +32,8 @@ namespace SampleRender
 
 		void SetClearColor(float r, float g, float b, float a) override;
 
+		uint32_t GetUniformAttachment() override;
+
 		void ReceiveCommands() override;
 		void DispatchCommands() override;
 		void Present() override;
@@ -76,6 +78,7 @@ namespace SampleRender
 		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice adapter);
 		bool CheckDeviceExtensionSupport(VkPhysicalDevice adapter);
 		SwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice adapter);
+		void BufferizeUniformAttachment();
 
 		static const std::vector<const char*> deviceExtensions;
 
@@ -123,6 +126,7 @@ namespace SampleRender
 		VkInstance m_Instance;
 		VkSurfaceKHR m_Surface;
 		VkPhysicalDevice m_Adapter = VK_NULL_HANDLE;
+		uint32_t m_UniformAttachment;
 		VkDevice m_Device;
 		VkQueue m_GraphicsQueue;
 		VkQueue m_PresentQueue;

@@ -112,6 +112,7 @@ SampleRender::VKVertexBuffer::VKVertexBuffer(const std::shared_ptr<VKContext>* c
 SampleRender::VKVertexBuffer::~VKVertexBuffer()
 {
     auto device = (*m_Context)->GetDevice();
+    vkDeviceWaitIdle(device);
     vkDestroyBuffer(device, m_Buffer, nullptr);
     vkFreeMemory(device, m_BufferMemory, nullptr);
 }
@@ -152,6 +153,7 @@ SampleRender::VKIndexBuffer::VKIndexBuffer(const std::shared_ptr<VKContext>* con
 SampleRender::VKIndexBuffer::~VKIndexBuffer()
 {
     auto device = (*m_Context)->GetDevice();
+    vkDeviceWaitIdle(device);
     vkDestroyBuffer(device, m_Buffer, nullptr);
     vkFreeMemory(device, m_BufferMemory, nullptr);
 }

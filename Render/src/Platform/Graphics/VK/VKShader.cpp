@@ -120,6 +120,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
 SampleRender::VKShader::~VKShader()
 {
     auto device = (*m_Context)->GetDevice();
+    vkDeviceWaitIdle(device);
     vkDestroyPipeline(device, m_GraphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, m_RootSignature, nullptr);
 }

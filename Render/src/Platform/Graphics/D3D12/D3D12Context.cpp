@@ -42,6 +42,11 @@ void SampleRender::D3D12Context::SetClearColor(float r, float g, float b, float 
 	m_ClearColor.Color[3] = a;
 }
 
+uint32_t SampleRender::D3D12Context::GetUniformAttachment()
+{
+	return 256;
+}
+
 void SampleRender::D3D12Context::ReceiveCommands()
 {
 	m_CurrentBufferIndex = m_SwapChain->GetCurrentBackBufferIndex();
@@ -117,7 +122,6 @@ void SampleRender::D3D12Context::StageViewportAndScissors()
 void SampleRender::D3D12Context::Draw(uint32_t elements)
 {
 	m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
 	m_CommandList->DrawIndexedInstanced(elements, 1, 0, 0, 0);
 }
 

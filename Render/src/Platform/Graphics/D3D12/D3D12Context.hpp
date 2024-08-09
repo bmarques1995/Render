@@ -22,8 +22,9 @@ namespace SampleRender
 		D3D12Context(const Window* windowHandle, uint32_t framesInFlight);
 		~D3D12Context();
 
-
 		void SetClearColor(float r, float g, float b, float a) override;
+
+		uint32_t GetUniformAttachment() override;
 
 		void ReceiveCommands() override;
 		void DispatchCommands() override;

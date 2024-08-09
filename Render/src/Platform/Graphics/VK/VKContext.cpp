@@ -58,6 +58,7 @@ SampleRender::VKContext::VKContext(const Window* windowHandle, uint32_t framesIn
 #endif
     CreateSurface(windowHandle);
     SelectAdapter();
+    BufferizeUniformAttachment();
     GetGPUName();
     CreateDevice();
     CreateViewportAndScissor(windowHandle->GetWidth(), windowHandle->GetHeight());
@@ -73,6 +74,7 @@ SampleRender::VKContext::VKContext(const Window* windowHandle, uint32_t framesIn
 
 SampleRender::VKContext::~VKContext()
 {
+    vkDeviceWaitIdle(m_Device);
     for (size_t i = 0; i < m_FramesInFlight; i++)
         vkDestroyFence(m_Device, m_InFlightFences[i], nullptr);
     delete[] m_InFlightFences;
@@ -89,6 +91,7 @@ SampleRender::VKContext::~VKContext()
     
     vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
     CleanupFramebuffers();
+    CleanupDepthStencilView();
     vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
     CleanupImageView();
     CleanupSwapChain();
@@ -107,6 +110,11 @@ void SampleRender::VKContext::SetClearColor(float r, float g, float b, float a)
     m_ClearColor.float32[1] = g;
     m_ClearColor.float32[2] = b;
     m_ClearColor.float32[3] = a;
+}
+
+uint32_t SampleRender::VKContext::GetUniformAttachment()
+{
+    return 0;
 }
 
 void SampleRender::VKContext::ReceiveCommands()
@@ -443,6 +451,13 @@ SampleRender::SwapChainSupportDetails SampleRender::VKContext::QuerySwapChainSup
     }
 
     return details;
+}
+
+void SampleRender::VKContext::BufferizeUniformAttachment()
+{
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(m_Adapter, &deviceProperties);
+    m_UniformAttachment = (uint32_t)deviceProperties.limits.minUniformBufferOffsetAlignment;
 }
 
 void SampleRender::VKContext::CreateDevice()

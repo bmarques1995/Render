@@ -20,7 +20,10 @@ namespace SampleRender
 	{
 	public:
 		virtual ~GraphicsContext() = default;
+		
 		virtual void SetClearColor(float r, float g, float b, float a) = 0;
+
+		virtual uint32_t GetUniformAttachment() = 0;
 
 		virtual void ReceiveCommands() = 0;
 		virtual void DispatchCommands() = 0;

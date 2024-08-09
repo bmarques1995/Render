@@ -46,6 +46,11 @@ SampleRender::Application::Application(std::string programLocation) :
 
 SampleRender::Application::~Application()
 {
+	m_IndexBuffer.reset();
+	m_VertexBuffer.reset();
+	m_Shader.reset();
+	m_Context.reset();
+	m_Window.reset();
 }
 
 void SampleRender::Application::Run()
