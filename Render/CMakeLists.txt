@@ -86,7 +86,7 @@ if(WIN32)
 
 	target_link_libraries(${TARGET_NAME} PUBLIC d3d12 dxgi dxguid)
 endif()
-target_link_libraries(${TARGET_NAME} PUBLIC Vulkan::Headers Vulkan::Loader)
+target_link_libraries(${TARGET_NAME} PUBLIC Vulkan::Headers Vulkan::Loader Eigen3::Eigen)
 if(BUILD_SHARED_LIBS)
 	if(WIN32)
 		target_compile_definitions(${TARGET_NAME} PRIVATE SAMPLE_RENDER_DLL_MACRO_EXPORT)

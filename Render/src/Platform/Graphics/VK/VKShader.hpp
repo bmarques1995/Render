@@ -8,6 +8,19 @@
 
 namespace SampleRender
 {
+	//Resource Memomy View
+	struct RM
+	{
+		VkBuffer Resource;
+		VkDeviceMemory Memory;
+		void* RawMemory;
+	};
+
+	struct DescriptorTable
+	{
+		VkDescriptorSet Descriptor;
+	};
+
 	class SAMPLE_RENDER_DLL_COMMAND VKShader : public Shader
 	{
 	public:
@@ -15,10 +28,25 @@ namespace SampleRender
 		~VKShader();
 
 		void Stage() override;
-		virtual uint32_t GetStride() const override;
-		virtual uint32_t GetOffset() const override;
+		uint32_t GetStride() const override;
+		uint32_t GetOffset() const override;
+
+		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset) override;
 
 	private:
+
+		bool IsUniformValid(size_t size);
+		void PushUniform(const void* data, size_t size, uint32_t bindingSlot);
+		void MapUniform(const void* data, size_t size, uint32_t bindingSlot);
+		void BindUniform(uint32_t bindingSlot);
+		void CreateDescriptorSet(size_t bufferSize, uint32_t bindingSlot);
+		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+		//Close to RootSignature
+		void CreateDescriptorSetLayout();
+		void CreateDescriptorPool();
+
+		void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
 		void PushShader(std::string_view stage, VkPipelineShaderStageCreateInfo* graphicsDesc);
 		void InitJsonAndPaths(std::string json_controller_path);
@@ -35,12 +63,17 @@ namespace SampleRender
 		std::unordered_map<std::string, VkShaderModule> m_Modules;
 		std::unordered_map<std::string, std::string> m_ModulesEntrypoint;
 
+		std::unordered_map<uint32_t, RM> m_Uniforms;
+		std::unordered_map<uint32_t, DescriptorTable> m_UniformsTables;
+
 		Json::Value m_PipelineInfo;
 
+		VkDescriptorSetLayout m_RootSignature;
+		VkDescriptorPool m_DescriptorPool;
 		BufferLayout m_Layout;
 		const std::shared_ptr<VKContext>* m_Context;
 		std::string m_ShaderDir;
 		VkPipeline m_GraphicsPipeline;
-		VkPipelineLayout m_RootSignature;
+		VkPipelineLayout m_PipelineLayout;
 	};
 }

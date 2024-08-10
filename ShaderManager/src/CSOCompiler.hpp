@@ -11,8 +11,12 @@ namespace SampleRender
 
 		//CSO/SPV
 		void CompilePackedShader();
-		void PushArgList(std::string stage);
+		
 	private:
+		void PushArgList(std::string stage);
+
+		void PushRootSignatureArgs(std::string rs_name);
+		void CompileRootSignature(std::string source, std::string basepath);
 
 		std::wstring m_CurrentFormattedStage;
 		std::wstring m_CurrentEntrypoint;

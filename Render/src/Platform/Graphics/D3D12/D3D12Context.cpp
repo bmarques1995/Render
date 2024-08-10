@@ -313,7 +313,7 @@ void SampleRender::D3D12Context::CreateDepthStencilView()
 	D3D12_CPU_DESCRIPTOR_HANDLE dsvHeapStartHandle = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
 	m_DSVHandle = { dsvHeapStartHandle.ptr };
 
-	D3D12_RESOURCE_DESC depthStencilDesc = {};
+	D3D12_RESOURCE_DESC1 depthStencilDesc = {};
 	depthStencilDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	depthStencilDesc.Width = m_ScissorRect.right;
 	depthStencilDesc.Height = m_ScissorRect.bottom;
@@ -335,12 +335,13 @@ void SampleRender::D3D12Context::CreateDepthStencilView()
 	heapProps.CreationNodeMask = 1;
 	heapProps.VisibleNodeMask = 1;
 
-	hr = m_Device->CreateCommittedResource(
+	hr = m_Device->CreateCommittedResource2(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&depthStencilDesc,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		&depthOptimizedClearValue,
+		nullptr,
 		IID_PPV_ARGS(m_DepthStencilView.GetAddressOf()));
 	assert(hr == S_OK);
 

@@ -4,6 +4,9 @@
 
 namespace fs = std::filesystem;
 
+const uint32_t SampleRender::D3D12Shader::s_SmallAttachmentStride = 4;
+const uint32_t SampleRender::D3D12Shader::s_AttachmentStride = 256;
+
 const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> SampleRender::D3D12Shader::s_ShaderPusher =
 {
 	{"vs", [](IDxcBlob** blob, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)-> void
@@ -99,73 +102,57 @@ uint32_t SampleRender::D3D12Shader::GetOffset() const
 	return 0;
 }
 
+void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset)
+{
+	switch (pushType)
+	{
+	case SampleRender::PushType::PUSH_SMALL:
+	{
+		if (!Is32BitBufferValid(size))
+			throw AttachmentMismatchException(size, s_SmallAttachmentStride);
+		Bind32Buffer(data, size, bindingSlot, gpuOffset);
+		break;
+	}
+	case SampleRender::PushType::PUSH_UNIFORM_CONSTANT:
+	{
+		if (!IsCBufferValid(size))
+			throw AttachmentMismatchException(size, s_SmallAttachmentStride);
+		if (m_CBuffers.find(bindingSlot) == m_CBuffers.end())
+			PushCBuffer(data, size, bindingSlot);
+		else
+			MapCBuffer(data, size, bindingSlot);
+		BindCBuffer(bindingSlot);
+		break;
+	}
+	default:
+		throw GraphicsException("Invalid Push Type, it can be only PUSH_SMALL or PUSH_UNIFORM_CONSTANT");
+		break;
+	}
+}
+
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
 {
 	HRESULT hr;
-	ComPointer<IDxcBlob> errorBlob;
+	std::string shaderName = m_PipelineInfo["BinShaders"]["rs"]["filename"].asString();
+	std::stringstream shaderFullPath;
+	shaderFullPath << m_ShaderDir << "/" << shaderName;
+	std::string shaderPath = shaderFullPath.str();
 
-	D3D12_DESCRIPTOR_RANGE1 descRange = {};
-	
-	descRange.BaseShaderRegister = 0;
-	descRange.NumDescriptors = 1;
-	descRange.OffsetInDescriptorsFromTableStart = 0;
-	descRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-	descRange.RegisterSpace = 0;
+	if (!FileHandler::FileExists(shaderPath))
+		return;
 
-	D3D12_ROOT_PARAMETER1 param[2] = {};
+	ComPointer<IDxcUtils> lib;
+	hr = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(lib.GetAddressOf()));
+	assert(hr == S_OK);
 
-	param[0].ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-	param[0].Constants.ShaderRegister = 0;
-	param[0].Constants.RegisterSpace = 0;
-	param[0].Constants.Num32BitValues = 32;
-	param[0].ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+	size_t blobSize;
+	std::byte* blobData;
 
-	param[1].ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-	param[1].DescriptorTable.NumDescriptorRanges = 1;
-	param[1].DescriptorTable.pDescriptorRanges = &descRange;
-	param[1].ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+	if (!FileHandler::ReadBinFile(shaderPath, &blobData, &blobSize))
+		return;
 
-	D3D12_STATIC_SAMPLER_DESC staticSampler = {};
-	staticSampler.Filter = D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
-	staticSampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	staticSampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	staticSampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	staticSampler.MipLODBias = .0f;
-	staticSampler.MaxAnisotropy = 0;
-	staticSampler.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
-	staticSampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-	staticSampler.MinLOD = .0f;
-	staticSampler.MaxLOD = .0f;
-	staticSampler.ShaderRegister = 0;
-	staticSampler.RegisterSpace = 0;
-	staticSampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-	D3D12_VERSIONED_ROOT_SIGNATURE_DESC descVer = {};
-
-	D3D12_ROOT_SIGNATURE_DESC1 desc = {};
-
-	desc.NumParameters = sizeof(param) / sizeof(D3D12_ROOT_PARAMETER);
-	desc.pParameters = param;
-	desc.NumStaticSamplers = 1;
-	desc.pStaticSamplers = &staticSampler;
-	desc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
-		D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS;
-
-	descVer.Desc_1_1 = desc;
-	descVer.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
-
-	D3D12SerializeVersionedRootSignature(&descVer, (ID3DBlob**)m_RootBlob.GetAddressOf(), (ID3DBlob**)errorBlob.GetAddressOf());
-	if (errorBlob.Get() != nullptr)
-	{
-		if (errorBlob->GetBufferSize())
-		{
-			Console::CoreError("Root Signature Error: {}", (const char*)errorBlob->GetBufferPointer());
-		}
-		errorBlob->Release();
-		assert(false);
-	}
+	// Create blob from memory
+	hr = lib->CreateBlob((void*)blobData, blobSize, DXC_CP_ACP, (IDxcBlobEncoding**)m_RootBlob.GetAddressOf());
 
 	hr = device->CreateRootSignature(0, m_RootBlob->GetBufferPointer(), m_RootBlob->GetBufferSize(), IID_PPV_ARGS(rootSignature));
 	assert(hr == S_OK);
@@ -208,6 +195,99 @@ void SampleRender::D3D12Shader::BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_
 	graphicsDesc->DepthStencilState.FrontFace.StencilFailOp = graphicsDesc->DepthStencilState.FrontFace.StencilDepthFailOp = graphicsDesc->DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
 	graphicsDesc->DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
 	graphicsDesc->DepthStencilState.BackFace = graphicsDesc->DepthStencilState.FrontFace;
+}
+
+void SampleRender::D3D12Shader::PushCBuffer(const void* data, size_t size, uint32_t bindingSlot)
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	m_CBuffers[bindingSlot] = { nullptr, {} };
+
+	D3D12_DESCRIPTOR_HEAP_DESC cbvDescriptorHeapDesc{};
+	cbvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	cbvDescriptorHeapDesc.NumDescriptors = 1;
+	cbvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	cbvDescriptorHeapDesc.NodeMask = 0;
+
+	hr = device->CreateDescriptorHeap(&cbvDescriptorHeapDesc, IID_PPV_ARGS(m_CBuffers[bindingSlot].Heap.GetAddressOf()));
+	assert(hr == S_OK);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE cbvHeapStartHandle = m_CBuffers[bindingSlot].Heap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_RESOURCE_DESC1 constantBufferDesc = {};
+	constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	constantBufferDesc.Width = size;
+	constantBufferDesc.Height = 1;
+	constantBufferDesc.DepthOrArraySize = 1;
+	constantBufferDesc.MipLevels = 1;
+	constantBufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	constantBufferDesc.SampleDesc.Count = 1;
+	constantBufferDesc.SampleDesc.Quality = 0;
+	constantBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	constantBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;
+
+	hr = device->CreateCommittedResource2(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&constantBufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		nullptr,
+		IID_PPV_ARGS(m_CBuffers[bindingSlot].Resource.GetAddressOf()));
+	
+	assert(hr == S_OK);
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
+
+	cbvDesc.BufferLocation = m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = size;
+
+	device->CreateConstantBufferView(&cbvDesc, cbvHeapStartHandle);
+
+	MapCBuffer(data, size, bindingSlot);
+}
+
+void SampleRender::D3D12Shader::MapCBuffer(const void* data, size_t size, uint32_t bindingSlot)
+{
+	HRESULT hr;
+	D3D12_RANGE readRange = { 0 };
+	void* gpuData = nullptr;
+	hr = m_CBuffers[bindingSlot].Resource->Map(0, &readRange, &gpuData);
+	assert(hr == S_OK);
+	memcpy(gpuData, data, size);
+	m_CBuffers[bindingSlot].Resource->Unmap(0, NULL);
+}
+
+void SampleRender::D3D12Shader::Bind32Buffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
+{
+	auto cmdList = (*m_Context)->GetCurrentCommandList();
+	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/s_SmallAttachmentStride, data, offset%s_SmallAttachmentStride);
+}
+
+void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
+{
+	auto cmdList = (*m_Context)->GetCurrentCommandList();
+	//cmdList->SetDescriptorHeaps(1, m_CBuffers[bindingSlot].Heap.GetAddressOf());
+	//cmdList->SetGraphicsRootDescriptorTable(bindingSlot, m_CBuffers[bindingSlot].Heap->GetGPUDescriptorHandleForHeapStart());
+	cmdList->SetGraphicsRootConstantBufferView(bindingSlot, m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress());
+}
+
+bool SampleRender::D3D12Shader::Is32BitBufferValid(size_t size)
+{
+	return ((size % s_SmallAttachmentStride) == 0);
+}
+
+bool SampleRender::D3D12Shader::IsCBufferValid(size_t size)
+{
+	return ((size % s_AttachmentStride) == 0);
 }
 
 void SampleRender::D3D12Shader::PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)

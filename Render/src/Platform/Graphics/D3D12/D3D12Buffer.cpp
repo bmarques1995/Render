@@ -15,7 +15,7 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 	heapProps.CreationNodeMask = 1;
 	heapProps.VisibleNodeMask = 1;
 
-	D3D12_RESOURCE_DESC resourceDesc = {};
+	D3D12_RESOURCE_DESC1 resourceDesc = {};
 	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
 	resourceDesc.Alignment = 0;
 	resourceDesc.Width = (UINT)size;
@@ -29,18 +29,19 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 	auto device = (*m_Context)->GetDevicePtr();
-	void* gpuData = nullptr;
+	
 	D3D12_RANGE readRange = { 0 };
-
-	hr = device->CreateCommittedResource(
+	hr = device->CreateCommittedResource2(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
+		nullptr,
 		IID_PPV_ARGS(m_Buffer.GetAddressOf()));
 	assert(hr == S_OK);
 
+	void* gpuData = nullptr;
 	hr = m_Buffer->Map(0, &readRange, &gpuData);
 	assert(hr == S_OK);
 	memcpy(gpuData, data, size);

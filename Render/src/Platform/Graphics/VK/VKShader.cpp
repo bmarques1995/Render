@@ -1,6 +1,7 @@
 #include "VKShader.hpp"
 #include "FileHandler.hpp"
 #include <filesystem>
+#include <cstdlib>
 
 namespace fs = std::filesystem;
 
@@ -70,6 +71,13 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     SetRasterizer(&rasterizer);
     SetBlend(&colorBlendAttachment, &colorBlending);
     SetDepthStencil(&depthStencil);
+    CreateDescriptorSetLayout();
+    CreateDescriptorPool();
+    
+    unsigned char* data = new unsigned char[256];
+    PushUniform(data, 256, 1);
+    CreateDescriptorSet(256, 1);
+    delete[] data;
 
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -80,12 +88,19 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
+    VkPushConstantRange pushConstantRange{};
+    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstantRange.offset = 0;
+    pushConstantRange.size = 192;
+
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &m_RootSignature;
+    pipelineLayoutInfo.pushConstantRangeCount = 1;
+    pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
-    vkr = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_RootSignature);
+    vkr = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
     assert(vkr == VK_SUCCESS);
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -100,7 +115,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.pDepthStencilState = &depthStencil;
-    pipelineInfo.layout = m_RootSignature;
+    pipelineInfo.layout = m_PipelineLayout;
     pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
@@ -121,8 +136,15 @@ SampleRender::VKShader::~VKShader()
 {
     auto device = (*m_Context)->GetDevice();
     vkDeviceWaitIdle(device);
+    for (auto& i : m_Uniforms)
+    {
+        vkDestroyBuffer(device, i.second.Resource, nullptr);
+        vkFreeMemory(device, i.second.Memory, nullptr);
+    }
+    vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, m_RootSignature, nullptr);
     vkDestroyPipeline(device, m_GraphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(device, m_RootSignature, nullptr);
+    vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
 }
 
 void SampleRender::VKShader::Stage()
@@ -139,6 +161,183 @@ uint32_t SampleRender::VKShader::GetStride() const
 uint32_t SampleRender::VKShader::GetOffset() const
 {
     return 0;
+}
+
+void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset)
+{
+    switch (pushType)
+    {
+    case SampleRender::PushType::PUSH_SMALL:
+    {
+        BindSmallBuffer(data, size, bindingSlot, gpuOffset);
+        break;
+    }
+    case SampleRender::PushType::PUSH_UNIFORM_CONSTANT:
+    {
+        if (!IsUniformValid(size))
+            throw AttachmentMismatchException(size, (*m_Context)->GetUniformAttachment());
+        if (m_Uniforms.find(bindingSlot) == m_Uniforms.end())
+            PushUniform(data, size, bindingSlot);
+        else
+            MapUniform(data, size, bindingSlot);
+        BindUniform(bindingSlot);
+        break;
+    }
+    default:
+        throw GraphicsException("Invalid Push Type, it can be only PUSH_SMALL or PUSH_UNIFORM_CONSTANT");
+        break;
+    }
+}
+
+bool SampleRender::VKShader::IsUniformValid(size_t size)
+{
+    return ((size % (*m_Context)->GetUniformAttachment()) == 0);
+}
+
+void SampleRender::VKShader::PushUniform(const void* data, size_t size, uint32_t bindingSlot)
+{
+    VkResult vkr;
+    auto device = (*m_Context)->GetDevice();
+    VkDeviceSize bufferSize = size;
+    m_Uniforms[bindingSlot] = {};
+
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[bindingSlot].Resource);
+    assert(vkr == VK_SUCCESS);
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(device, m_Uniforms[bindingSlot].Resource, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &m_Uniforms[bindingSlot].Memory);
+    assert(vkr == VK_SUCCESS);
+
+    vkBindBufferMemory(device, m_Uniforms[bindingSlot].Resource, m_Uniforms[bindingSlot].Memory, 0);
+
+    MapUniform(data, size, bindingSlot);
+}
+
+void SampleRender::VKShader::MapUniform(const void* data, size_t size, uint32_t bindingSlot)
+{
+    VkResult vkr;
+    auto device = (*m_Context)->GetDevice();
+    vkr = vkMapMemory(device, m_Uniforms[bindingSlot].Memory, 0, size, 0, &m_Uniforms[bindingSlot].RawMemory);
+    assert(vkr == VK_SUCCESS);
+    memcpy(m_Uniforms[bindingSlot].RawMemory, data, size);
+    vkUnmapMemory(device, m_Uniforms[bindingSlot].Memory);
+}
+
+void SampleRender::VKShader::BindUniform(uint32_t bindingSlot)
+{
+    auto commandBuffer = (*m_Context)->GetCurrentCommandBuffer();
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_UniformsTables[bindingSlot].Descriptor, 0, nullptr);
+}
+
+uint32_t SampleRender::VKShader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    auto adapter = (*m_Context)->GetAdapter();
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(adapter, &memProperties);
+
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+
+    return 0xffffffff;
+}
+
+void SampleRender::VKShader::CreateDescriptorSetLayout()
+{
+    VkResult vkr;
+    auto device = (*m_Context)->GetDevice();
+
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 1;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.pImmutableSamplers = nullptr;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+
+    vkr = vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_RootSignature);
+    assert(vkr == VK_SUCCESS);
+}
+
+void SampleRender::VKShader::CreateDescriptorPool()
+{
+    VkResult vkr;
+    auto device = (*m_Context)->GetDevice();
+
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = 1;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = 1;
+
+    vkr = vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
+    assert(vkr == VK_SUCCESS);
+}
+
+void SampleRender::VKShader::CreateDescriptorSet(size_t bufferSize, uint32_t bindingSlot)
+{
+    VkResult vkr;
+    auto device = (*m_Context)->GetDevice();
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = m_DescriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &m_RootSignature;
+
+    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTables[bindingSlot].Descriptor);
+    assert(vkr == VK_SUCCESS);
+
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = m_Uniforms[bindingSlot].Resource;
+    bufferInfo.offset = 0;
+    bufferInfo.range = bufferSize;
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = m_UniformsTables[bindingSlot].Descriptor;
+    descriptorWrite.dstBinding = 1;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+
+    vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
+}
+
+void SampleRender::VKShader::BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
+{
+    vkCmdPushConstants(
+        (*m_Context)->GetCurrentCommandBuffer(),
+        m_PipelineLayout,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        offset, // Offset
+        size,
+        data
+    );
 }
 
 void SampleRender::VKShader::PushShader(std::string_view stage, VkPipelineShaderStageCreateInfo* graphicsDesc)

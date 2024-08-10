@@ -6,14 +6,29 @@
 #include "RenderDLLMacro.hpp"
 #include "Window.hpp"
 
+#include <exception>
+
 namespace SampleRender
 {
+	
 	enum GraphicsAPI
 	{
 		SAMPLE_RENDER_GRAPHICS_API_VK = 1,
 #ifdef RENDER_USES_WINDOWS
 		SAMPLE_RENDER_GRAPHICS_API_D3D12,
 #endif //D3D12_GUARD
+	};
+
+	class SAMPLE_RENDER_DLL_COMMAND GraphicsException : public std::exception
+	{
+	public:
+		GraphicsException(std::string reason);
+
+		char const* what() const override;
+	protected:
+		GraphicsException();
+
+		std::string m_Reason;
 	};
 
 	class SAMPLE_RENDER_DLL_COMMAND GraphicsContext

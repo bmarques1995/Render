@@ -14,6 +14,7 @@
 #include "Shader.hpp"
 #include "Buffer.hpp"
 #include "ApplicationStarter.hpp"
+#include <Eigen/Eigen>
 
 namespace SampleRender
 {
@@ -52,6 +53,24 @@ namespace SampleRender
 			3,4,5,
 			0,1,2,
 		};
+
+		struct SmallMVP
+		{
+			Eigen::Matrix4f model;
+			Eigen::Matrix4f view;
+			Eigen::Matrix4f projection;
+		};
+
+		struct CompleteMVP
+		{
+			Eigen::Matrix4f model;
+			Eigen::Matrix4f view;
+			Eigen::Matrix4f projection;
+			Eigen::Matrix4f fill;
+		};
+
+		SmallMVP m_SmallMVP;
+		CompleteMVP m_CompleteMVP;
 
 		std::shared_ptr<Window> m_Window;
 		std::shared_ptr<GraphicsContext> m_Context;

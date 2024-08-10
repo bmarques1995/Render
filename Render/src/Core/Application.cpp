@@ -15,6 +15,17 @@ SampleRender::Application::Application(std::string programLocation) :
 	m_ProgramLocation(programLocation)
 {
 	EnableSingleton(this);
+	m_CompleteMVP = { 
+		Eigen::Matrix4f::Identity(),
+		Eigen::Matrix4f::Identity(),
+		Eigen::Matrix4f::Identity(),
+		Eigen::Matrix4f::Identity()
+	};
+	m_SmallMVP = { 
+		Eigen::Matrix4f::Identity(),
+		Eigen::Matrix4f::Identity(),
+		Eigen::Matrix4f::Identity()
+	};
 	m_Starter.reset(new ApplicationStarter("render.json"));
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));
@@ -64,6 +75,8 @@ void SampleRender::Application::Run()
 		{
 			m_Context->ReceiveCommands();
 			m_Shader->Stage();
+			m_Shader->BindUniforms(&m_SmallMVP.model(0,0), sizeof(m_SmallMVP), 0, PushType::PUSH_SMALL, 0);
+			m_Shader->BindUniforms(&m_CompleteMVP.model(0,0), sizeof(m_CompleteMVP), 1, PushType::PUSH_UNIFORM_CONSTANT, 0);
 			m_VertexBuffer->Stage();
 			m_IndexBuffer->Stage();
 			m_Context->StageViewportAndScissors();

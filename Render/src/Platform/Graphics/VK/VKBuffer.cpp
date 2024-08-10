@@ -91,13 +91,15 @@ uint32_t SampleRender::VKBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPro
 SampleRender::VKVertexBuffer::VKVertexBuffer(const std::shared_ptr<VKContext>* context, const void* data, size_t size, uint32_t stride) :
     VKBuffer(context)
 {
+    VkResult vkr;
     auto device = (*m_Context)->GetDevice();
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
     CreateBuffer(size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
 
     void* mappedData;
-    vkMapMemory(device, stagingBufferMemory, 0, size, 0, &mappedData);
+    vkr = vkMapMemory(device, stagingBufferMemory, 0, size, 0, &mappedData);
+    assert(vkr == VK_SUCCESS);
     memcpy(mappedData, data, size);
     vkUnmapMemory(device, stagingBufferMemory);
 

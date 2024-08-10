@@ -7,6 +7,15 @@
 #include "VKContext.hpp"
 #include "VKShader.hpp"
 
+SampleRender::AttachmentMismatchException::AttachmentMismatchException(size_t bufferSize, size_t expectedBufferAttachment) :
+	GraphicsException()
+{
+	std::stringstream buffer;
+	buffer << "Is expected the buffer be multiple of " << expectedBufferAttachment <<
+		", but the module of the division between the buffer size and the expected attachment is " << (bufferSize % expectedBufferAttachment);
+	m_Reason = buffer.str();
+}
+
 SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, BufferLayout layout)
 {
 	GraphicsAPI api = Application::GetInstance()->GetCurrentAPI();

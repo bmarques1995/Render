@@ -114,7 +114,7 @@ void SampleRender::VKContext::SetClearColor(float r, float g, float b, float a)
 
 uint32_t SampleRender::VKContext::GetUniformAttachment()
 {
-    return 0;
+    return m_UniformAttachment;
 }
 
 void SampleRender::VKContext::ReceiveCommands()

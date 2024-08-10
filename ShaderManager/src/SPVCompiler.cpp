@@ -115,6 +115,8 @@ void SampleRender::SPVCompiler::PushArgList(std::string stage)
 	m_ArgList.push_back(m_VulkanFeatureLevelArg.c_str());
 	if ((stage.compare("vs") == 0) || (stage.compare("gs") == 0) || (stage.compare("ds") == 0))
 		m_ArgList.push_back(L"-fvk-invert-y");
+	m_ArgList.push_back(L"-D");
+	m_ArgList.push_back(L"VK_HLSL");
 }
 
 void SampleRender::SPVCompiler::ValidateVulkanFeatureLevel(std::string version)
