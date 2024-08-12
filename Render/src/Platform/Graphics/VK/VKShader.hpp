@@ -13,7 +13,6 @@ namespace SampleRender
 	{
 		VkBuffer Resource;
 		VkDeviceMemory Memory;
-		void* RawMemory;
 	};
 
 	struct DescriptorTable

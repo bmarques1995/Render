@@ -229,10 +229,11 @@ void SampleRender::VKShader::PushUniform(const void* data, size_t size, uint32_t
 void SampleRender::VKShader::MapUniform(const void* data, size_t size, uint32_t bindingSlot)
 {
     VkResult vkr;
+    void* gpuData;
     auto device = (*m_Context)->GetDevice();
-    vkr = vkMapMemory(device, m_Uniforms[bindingSlot].Memory, 0, size, 0, &m_Uniforms[bindingSlot].RawMemory);
+    vkr = vkMapMemory(device, m_Uniforms[bindingSlot].Memory, 0, size, 0, &gpuData);
     assert(vkr == VK_SUCCESS);
-    memcpy(m_Uniforms[bindingSlot].RawMemory, data, size);
+    memcpy(gpuData, data, size);
     vkUnmapMemory(device, m_Uniforms[bindingSlot].Memory);
 }
 
