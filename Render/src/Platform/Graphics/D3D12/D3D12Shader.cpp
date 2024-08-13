@@ -83,6 +83,11 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 
 SampleRender::D3D12Shader::~D3D12Shader()
 {
+	for (auto& i : m_CBuffers)
+	{
+		i.second.Resource.Release();
+		i.second.Heap.Release();
+	}
 }
 
 void SampleRender::D3D12Shader::Stage()

@@ -26,9 +26,15 @@ SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t fr
 
 SampleRender::D3D12Context::~D3D12Context()
 {
+	FlushQueue();
+	m_CommandList.Release();
 	delete[] m_CommandAllocators;
+	m_DepthStencilView.Release();
 	delete[] m_RenderTargets;
 	delete[] m_RTVHandles;
+	m_SwapChain.Release();
+	m_CommandQueue.Release();
+	m_Device.Release();
 #ifdef RENDER_DEBUG_MODE
 	DisableDebug();
 #endif
@@ -223,7 +229,7 @@ void SampleRender::D3D12Context::CreateSwapChain(HWND windowHandle)
 	swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
 	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
 	swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_IGNORE;
-	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
+	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
 
 	DXGI_SWAP_CHAIN_FULLSCREEN_DESC fullscreenDesc{};
 	fullscreenDesc.RefreshRate.Denominator = 120;
@@ -383,11 +389,13 @@ void SampleRender::D3D12Context::WaitForFence(UINT64 fenceValue)
 	{
 		hr = m_CommandQueueFence->SetEventOnCompletion(fenceValue, m_CommandQueueFenceEvent);
 		if (hr == S_OK)
-			if (WaitForSingleObject(m_CommandQueueFenceEvent, 30000) == WAIT_OBJECT_0)
+			if (WaitForSingleObject(m_CommandQueueFenceEvent, INFINITE) == WAIT_OBJECT_0)
 				return;
 		// Fallback wait
 		while (m_CommandQueueFence->GetCompletedValue() < fenceValue) Sleep(1);
 	}
+	auto waitable = m_SwapChain->GetFrameLatencyWaitableObject();
+	WaitForMultipleObjects(1, &waitable, TRUE, INFINITE);
 }
 
 #ifdef RENDER_DEBUG_MODE
