@@ -15,6 +15,7 @@ namespace SampleRender
 		uint32_t GetHeight() const override;
 		std::any GetNativePointer() const override;
 		std::any GetInstance() const override;
+		void ResetTitle(std::string newTitle) override;
 		bool ShouldClose() const override;
 		const bool* TrackWindowClosing() const override;
 		bool IsMinimized() const override;
@@ -30,5 +31,6 @@ namespace SampleRender
 		std::function<void(uint32_t, uint32_t)> m_Resizer;
 		bool m_ShouldClose;
 		bool m_Minimized;
+		bool m_FullScreen;
 	};
 }

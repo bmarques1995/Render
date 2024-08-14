@@ -17,6 +17,7 @@ namespace SampleRender
 		virtual uint32_t GetHeight() const = 0;
 		virtual std::any GetNativePointer() const = 0;
 		virtual std::any GetInstance() const = 0;
+		virtual void ResetTitle(std::string newTitle) = 0;
 		virtual bool ShouldClose() const = 0;
 		virtual const bool* TrackWindowClosing() const = 0;
 		virtual bool IsMinimized() const = 0;

@@ -2,6 +2,7 @@
 
 #include "D3D12Context.hpp"
 #include <cassert>
+#include "Console.hpp"
 
 SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t framesInFlight) :
 	m_FramesInFlight(framesInFlight)
@@ -156,7 +157,7 @@ void SampleRender::D3D12Context::WindowResize(uint32_t width, uint32_t height)
 	CreateViewportAndScissor(width, height);
 	for (size_t i = 0; i < m_FramesInFlight; i++)
 		m_RenderTargets[i].Release();
-	m_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING);
+	m_SwapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH | DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING | DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
 	GetTargets();
 	m_DepthStencilView.Release();
 	CreateDepthStencilView();

@@ -3,7 +3,7 @@
 #include <windows.h>
 
 SampleRender::SDL3Window::SDL3Window(uint32_t width, uint32_t height, std::string_view title):
-	m_Width(width), m_Height(height), m_Title(title), m_Minimized(false), m_ShouldClose(false)
+	m_Width(width), m_Height(height), m_Title(title), m_Minimized(false), m_ShouldClose(false), m_FullScreen(false)
 {
 	int result;
 	m_Resizer = nullptr;
@@ -42,6 +42,12 @@ std::any SampleRender::SDL3Window::GetInstance() const
 	return (HINSTANCE)SDL_GetPointerProperty(SDL_GetWindowProperties(m_Window), SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER, NULL);
 }
 
+void SampleRender::SDL3Window::ResetTitle(std::string newTitle)
+{
+	m_Title = newTitle;
+	SDL_SetWindowTitle(m_Window, m_Title.c_str());
+}
+
 bool SampleRender::SDL3Window::ShouldClose() const
 {
 	return m_ShouldClose;
@@ -72,6 +78,14 @@ void SampleRender::SDL3Window::Update()
 			m_ShouldClose = true;
 		if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(m_Window))
 			m_ShouldClose = true;
+		if(event.type == SDL_EVENT_KEY_DOWN)
+		{
+			if (event.key.key == SDLK_SPACE) 
+			{
+				m_FullScreen = !m_FullScreen;
+				SDL_SetWindowFullscreen(m_Window, m_FullScreen);
+			}
+		}
 	}
 }
 

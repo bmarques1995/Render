@@ -30,6 +30,9 @@ SampleRender::Application::Application(std::string programLocation) :
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));
 	m_Window->ConnectResizer(std::bind(&GraphicsContext::WindowResize, m_Context.get(), std::placeholders::_1, std::placeholders::_2));
+	std::stringstream buffer;
+	buffer << "SampleRender Window [" << (m_Starter->GetCurrentAPI() == GraphicsAPI::SAMPLE_RENDER_GRAPHICS_API_VK ? "Vulkan" : "D3D12") << "]";
+	m_Window->ResetTitle(buffer.str());
 	try
 	{
 		m_SPVCompiler.reset(new SPVCompiler("_main", "_6_8", "1.3"));
