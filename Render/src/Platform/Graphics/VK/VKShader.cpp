@@ -320,7 +320,7 @@ void SampleRender::VKShader::CreateDescriptorSet(size_t bufferSize, uint32_t bin
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     descriptorWrite.dstSet = m_UniformsTables[bindingSlot].Descriptor;
-    descriptorWrite.dstBinding = 1;
+    descriptorWrite.dstBinding = bindingSlot;
     descriptorWrite.dstArrayElement = 0;
     descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     descriptorWrite.descriptorCount = 1;
