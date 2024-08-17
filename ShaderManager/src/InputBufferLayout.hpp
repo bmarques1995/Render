@@ -16,14 +16,14 @@ namespace SampleRender
 	SAMPLE_SHADER_MNG_DLL_COMMAND uint32_t ShaderDataTypeSize(ShaderDataType type);
 	
 
-	class SAMPLE_SHADER_MNG_DLL_COMMAND BufferElement
+	class SAMPLE_SHADER_MNG_DLL_COMMAND InputBufferElement
 	{
-		friend class BufferLayout;
+		friend class InputBufferLayout;
 		friend class Shader;
 	public:
-		BufferElement();
+		InputBufferElement();
 
-		BufferElement(ShaderDataType type, const std::string& name, bool normalized = false);
+		InputBufferElement(ShaderDataType type, const std::string& name, bool normalized = false);
 
 		uint32_t GetComponentCount() const;
 
@@ -40,26 +40,26 @@ namespace SampleRender
 		bool m_Normalized;
 	};
 
-	class SAMPLE_SHADER_MNG_DLL_COMMAND BufferLayout
+	class SAMPLE_SHADER_MNG_DLL_COMMAND InputBufferLayout
 	{
 	public:
-		BufferLayout() {}
+		InputBufferLayout() {}
 
-		BufferLayout(const std::initializer_list<BufferElement>& elements);
-		BufferLayout(const std::vector<BufferElement>& elements);
+		InputBufferLayout(const std::initializer_list<InputBufferElement>& elements);
+		InputBufferLayout(const std::vector<InputBufferElement>& elements);
 
 		inline uint32_t GetStride() const { return m_Stride; }
-		inline const std::vector<BufferElement>& GetElements() const { return m_Elements; }
+		inline const std::vector<InputBufferElement>& GetElements() const { return m_Elements; }
 
-		std::vector<BufferElement>::iterator begin() { return m_Elements.begin(); }
-		std::vector<BufferElement>::iterator end() { return m_Elements.end(); }
-		std::vector<BufferElement>::const_iterator begin() const { return m_Elements.begin(); }
-		std::vector<BufferElement>::const_iterator end() const { return m_Elements.end(); }
+		std::vector<InputBufferElement>::iterator begin() { return m_Elements.begin(); }
+		std::vector<InputBufferElement>::iterator end() { return m_Elements.end(); }
+		std::vector<InputBufferElement>::const_iterator begin() const { return m_Elements.begin(); }
+		std::vector<InputBufferElement>::const_iterator end() const { return m_Elements.end(); }
 	private:
 		void CalculateOffsetsAndStride();
 		
 	private:
-		std::vector<BufferElement> m_Elements;
+		std::vector<InputBufferElement> m_Elements;
 		uint32_t m_Stride = 0;
 	};
 }

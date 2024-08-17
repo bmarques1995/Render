@@ -15,10 +15,23 @@ const std::unordered_map<std::string, VkShaderStageFlagBits> SampleRender::VKSha
 {
     {"vs", VK_SHADER_STAGE_VERTEX_BIT},
     {"ps", VK_SHADER_STAGE_FRAGMENT_BIT}
+    
+
 };
 
-SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std::string json_controller_path, BufferLayout layout) : 
-	m_Context(context), m_Layout(layout)
+const std::unordered_map<uint32_t, VkShaderStageFlagBits> SampleRender::VKShader::s_EnumStageCaster =
+{
+    {AllowedStages::VERTEX_STAGE, VK_SHADER_STAGE_VERTEX_BIT},
+    {AllowedStages::GEOMETRY_STAGE, VK_SHADER_STAGE_GEOMETRY_BIT},
+    {AllowedStages::DOMAIN_STAGE, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT},
+    {AllowedStages::HULL_STAGE, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT},
+    {AllowedStages::PIXEL_STAGE, VK_SHADER_STAGE_FRAGMENT_BIT},
+    {AllowedStages::MESH_STAGE, VK_SHADER_STAGE_MESH_BIT_EXT},
+    {AllowedStages::AMPLIFICATION_STAGE, VK_SHADER_STAGE_TASK_BIT_EXT},
+};
+
+SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout) :
+	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout)
 {
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
@@ -71,13 +84,20 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     SetRasterizer(&rasterizer);
     SetBlend(&colorBlendAttachment, &colorBlending);
     SetDepthStencil(&depthStencil);
-    CreateDescriptorSetLayout();
     CreateDescriptorPool();
+    CreateDescriptorSetLayout();
     
-    unsigned char* data = new unsigned char[256];
-    PushUniform(data, 256, 1);
-    CreateDescriptorSet(256, 1);
-    delete[] data;
+    {
+        auto elements = m_UniformLayout.GetElements();
+
+        for (auto& element : elements)
+        {
+            unsigned char* data = new unsigned char[element.second.GetSize()];
+            PreallocateUniform(data, element.second);
+            CreateDescriptorSet(element.second);
+            delete[] data;
+        }
+    }
 
     std::vector<VkDynamicState> dynamicStates = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -89,7 +109,15 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     dynamicState.pDynamicStates = dynamicStates.data();
 
     VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    
+    //modificar
+    VkShaderStageFlags stageFlag = 0x0;
+
+    for (auto& i : s_EnumStageCaster)
+        if ((i.first & m_SmallBufferLayout.GetStages()) != 0)
+            stageFlag |= i.second;
+
+    pushConstantRange.stageFlags = stageFlag;
     pushConstantRange.offset = 0;
     pushConstantRange.size = 192;
 
@@ -163,30 +191,33 @@ uint32_t SampleRender::VKShader::GetOffset() const
     return 0;
 }
 
-void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset)
+void SampleRender::VKShader::BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot)
 {
-    switch (pushType)
+    if (size != m_SmallBufferLayout.GetElement(bindingSlot).GetSize())
+        throw SizeMismatchException(size, m_SmallBufferLayout.GetElement(bindingSlot).GetSize());
+    VkShaderStageFlags bindingFlag = 0;
+    for (auto& enumStage : s_EnumStageCaster)
     {
-    case SampleRender::PushType::PUSH_SMALL:
-    {
-        BindSmallBuffer(data, size, bindingSlot, gpuOffset);
-        break;
+        auto stages = m_SmallBufferLayout.GetStages();
+        if (stages & enumStage.first)
+            bindingFlag |= enumStage.second;
     }
-    case SampleRender::PushType::PUSH_UNIFORM_CONSTANT:
-    {
-        if (!IsUniformValid(size))
-            throw AttachmentMismatchException(size, (*m_Context)->GetUniformAttachment());
-        if (m_Uniforms.find(bindingSlot) == m_Uniforms.end())
-            PushUniform(data, size, bindingSlot);
-        else
-            MapUniform(data, size, bindingSlot);
-        BindUniform(bindingSlot);
-        break;
-    }
-    default:
-        throw GraphicsException("Invalid Push Type, it can be only PUSH_SMALL or PUSH_UNIFORM_CONSTANT");
-        break;
-    }
+    vkCmdPushConstants(
+        (*m_Context)->GetCurrentCommandBuffer(),
+        m_PipelineLayout,
+        bindingFlag,
+        m_SmallBufferLayout.GetElement(bindingSlot).GetOffset(), // Offset
+        size,
+        data
+    );
+}
+
+void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot)
+{
+    if (m_Uniforms.find(bindingSlot) == m_Uniforms.end())
+        return;
+    MapUniform(data, size, bindingSlot);
+    BindUniform(bindingSlot);
 }
 
 bool SampleRender::VKShader::IsUniformValid(size_t size)
@@ -194,36 +225,39 @@ bool SampleRender::VKShader::IsUniformValid(size_t size)
     return ((size % (*m_Context)->GetUniformAttachment()) == 0);
 }
 
-void SampleRender::VKShader::PushUniform(const void* data, size_t size, uint32_t bindingSlot)
+void SampleRender::VKShader::PreallocateUniform(const void* data, UniformElement uniformElement)
 {
+    if (!IsUniformValid(uniformElement.GetSize()))
+        throw AttachmentMismatchException(uniformElement.GetSize(), (*m_Context)->GetUniformAttachment());
+
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
-    VkDeviceSize bufferSize = size;
-    m_Uniforms[bindingSlot] = {};
+    VkDeviceSize bufferSize = uniformElement.GetSize();
+    m_Uniforms[uniformElement.GetBindingSlot()] = {};
 
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufferInfo.size = size;
-    bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    bufferInfo.size = uniformElement.GetSize();
+    bufferInfo.usage = GetNativeBufferUsage(uniformElement.GetBufferType());
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[bindingSlot].Resource);
+    vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Resource);
     assert(vkr == VK_SUCCESS);
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, m_Uniforms[bindingSlot].Resource, &memRequirements);
+    vkGetBufferMemoryRequirements(device, m_Uniforms[uniformElement.GetBindingSlot()].Resource, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
     allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
-    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &m_Uniforms[bindingSlot].Memory);
+    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Memory);
     assert(vkr == VK_SUCCESS);
 
-    vkBindBufferMemory(device, m_Uniforms[bindingSlot].Resource, m_Uniforms[bindingSlot].Memory, 0);
+    vkBindBufferMemory(device, m_Uniforms[uniformElement.GetBindingSlot()].Resource, m_Uniforms[uniformElement.GetBindingSlot()].Memory, 0);
 
-    MapUniform(data, size, bindingSlot);
+    MapUniform(data, uniformElement.GetSize(), uniformElement.GetBindingSlot());
 }
 
 void SampleRender::VKShader::MapUniform(const void* data, size_t size, uint32_t bindingSlot)
@@ -268,7 +302,14 @@ void SampleRender::VKShader::CreateDescriptorSetLayout()
     uboLayoutBinding.descriptorCount = 1;
     uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     uboLayoutBinding.pImmutableSamplers = nullptr;
-    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+    VkShaderStageFlags stageFlag = 0x0;
+
+    for (auto& i : s_EnumStageCaster)
+        if ((i.first & m_UniformLayout.GetStages()) != 0)
+            stageFlag |= i.second;
+
+    uboLayoutBinding.stageFlags = stageFlag;
 
     VkDescriptorSetLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -284,21 +325,27 @@ void SampleRender::VKShader::CreateDescriptorPool()
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
 
-    VkDescriptorPoolSize poolSize{};
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSize.descriptorCount = 1;
-
+    std::vector<VkDescriptorPoolSize> poolSize;
+    auto uniformElements = m_UniformLayout.GetElements();
+    for (auto& i : uniformElements)
+    {
+        VkDescriptorPoolSize poolSizer;
+        poolSizer.type = GetNativeDescriptorType(i.second.GetBufferType());
+        poolSizer.descriptorCount = 1;
+        poolSize.push_back(poolSizer);
+    }
+    
     VkDescriptorPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.poolSizeCount = 1;
-    poolInfo.pPoolSizes = &poolSize;
-    poolInfo.maxSets = 1;
+    poolInfo.pPoolSizes = poolSize.data();
+    poolInfo.maxSets = poolSize.size();
 
     vkr = vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
     assert(vkr == VK_SUCCESS);
 }
 
-void SampleRender::VKShader::CreateDescriptorSet(size_t bufferSize, uint32_t bindingSlot)
+void SampleRender::VKShader::CreateDescriptorSet(UniformElement uniformElement)
 {
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
@@ -309,27 +356,27 @@ void SampleRender::VKShader::CreateDescriptorSet(size_t bufferSize, uint32_t bin
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &m_RootSignature;
 
-    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTables[bindingSlot].Descriptor);
+    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTables[uniformElement.GetBindingSlot()].Descriptor);
     assert(vkr == VK_SUCCESS);
 
     VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = m_Uniforms[bindingSlot].Resource;
+    bufferInfo.buffer = m_Uniforms[uniformElement.GetBindingSlot()].Resource;
     bufferInfo.offset = 0;
-    bufferInfo.range = bufferSize;
+    bufferInfo.range = uniformElement.GetSize();
 
     VkWriteDescriptorSet descriptorWrite{};
     descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    descriptorWrite.dstSet = m_UniformsTables[bindingSlot].Descriptor;
-    descriptorWrite.dstBinding = bindingSlot;
+    descriptorWrite.dstSet = m_UniformsTables[uniformElement.GetBindingSlot()].Descriptor;
+    descriptorWrite.dstBinding = uniformElement.GetBindingSlot();
     descriptorWrite.dstArrayElement = 0;
-    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorType = GetNativeDescriptorType(uniformElement.GetBufferType());
     descriptorWrite.descriptorCount = 1;
     descriptorWrite.pBufferInfo = &bufferInfo;
 
     vkUpdateDescriptorSets(device, 1, &descriptorWrite, 0, nullptr);
 }
 
-void SampleRender::VKShader::BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
+void SampleRender::VKShader::BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
 {
     vkCmdPushConstants(
         (*m_Context)->GetCurrentCommandBuffer(),
@@ -464,5 +511,29 @@ VkFormat SampleRender::VKShader::GetNativeFormat(ShaderDataType type)
     case ShaderDataType::Uint4: return VK_FORMAT_R32G32B32A32_UINT;
     case ShaderDataType::Bool: return VK_FORMAT_R8_UINT;
     default: return VK_FORMAT_UNDEFINED;
+    }
+}
+
+VkBufferUsageFlagBits SampleRender::VKShader::GetNativeBufferUsage(BufferType type)
+{
+    switch (type)
+    {
+    case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+        return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+    default:
+    case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+        return VK_BUFFER_USAGE_FLAG_BITS_MAX_ENUM;
+    }
+}
+
+VkDescriptorType SampleRender::VKShader::GetNativeDescriptorType(BufferType type)
+{
+    switch (type)
+    {
+    case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+        return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    default:
+    case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+        return VK_DESCRIPTOR_TYPE_MAX_ENUM;
     }
 }

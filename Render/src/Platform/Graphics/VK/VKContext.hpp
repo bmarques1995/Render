@@ -32,7 +32,8 @@ namespace SampleRender
 
 		void SetClearColor(float r, float g, float b, float a) override;
 
-		uint32_t GetUniformAttachment() override;
+		uint32_t GetUniformAttachment() const override;
+		uint32_t GetSmallBufferAttachment() const override;
 
 		void ReceiveCommands() override;
 		void DispatchCommands() override;

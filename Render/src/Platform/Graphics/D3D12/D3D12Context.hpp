@@ -24,13 +24,15 @@ namespace SampleRender
 
 		void SetClearColor(float r, float g, float b, float a) override;
 
-		uint32_t GetUniformAttachment() override;
+		uint32_t GetUniformAttachment() const override;
 
 		void ReceiveCommands() override;
 		void DispatchCommands() override;
 		void Present() override;
 		void StageViewportAndScissors() override;
 		
+		uint32_t GetSmallBufferAttachment() const override;
+
 		void Draw(uint32_t elements) override;
 
 		ID3D12Device10* GetDevicePtr() const;

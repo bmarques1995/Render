@@ -17,17 +17,15 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND D3D12Shader : public Shader
 	{
 	public:
-		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, BufferLayout layout);
+		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout);
 		~D3D12Shader();
 
 		void Stage() override;
 		uint32_t GetStride() const override;
 		uint32_t GetOffset() const override;
 
-		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset) override;
-
-		static const uint32_t s_SmallAttachmentStride;
-		static const uint32_t s_AttachmentStride;
+		void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot) override;
+		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot) override;
 
 	private:
 
@@ -37,17 +35,19 @@ namespace SampleRender
 		void BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 
 		bool IsCBufferValid(size_t size);
-		void PushCBuffer(const void* data, size_t size, uint32_t bindingSlot);
+		void PreallocateCBuffer(const void* data, UniformElement uniformElement);
 		void MapCBuffer(const void* data, size_t size, uint32_t bindingSlot);
 		void BindCBuffer(uint32_t bindingSlot);
 
-		bool Is32BitBufferValid(size_t size);
-		void Bind32Buffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
+		bool IsSmallBufferValid(size_t size);
+		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 		void InitJsonAndPaths(std::string json_controller_path);
 
 		static DXGI_FORMAT GetNativeFormat(ShaderDataType type);
+		static D3D12_DESCRIPTOR_HEAP_TYPE GetNativeHeapType(BufferType type);
+		static D3D12_RESOURCE_DIMENSION GetNativeDimension(BufferType type);
 		static const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> s_ShaderPusher;
 		static const std::list<std::string> s_GraphicsPipelineStages;
 
@@ -55,7 +55,9 @@ namespace SampleRender
 
 		Json::Value m_PipelineInfo;
 
-		BufferLayout m_Layout;
+		InputBufferLayout m_Layout;
+		SmallBufferLayout m_SmallBufferLayout;
+		UniformLayout m_UniformLayout;
 		const std::shared_ptr<D3D12Context>* m_Context;
 		std::string m_ShaderDir;
 		ComPointer<IDxcBlob> m_RootBlob;

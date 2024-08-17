@@ -5,6 +5,7 @@
 #include <string>
 #include "RenderDLLMacro.hpp"
 #include "Window.hpp"
+#include "CommonException.hpp"
 
 #include <exception>
 
@@ -19,18 +20,6 @@ namespace SampleRender
 #endif //D3D12_GUARD
 	};
 
-	class SAMPLE_RENDER_DLL_COMMAND GraphicsException : public std::exception
-	{
-	public:
-		GraphicsException(std::string reason);
-
-		char const* what() const override;
-	protected:
-		GraphicsException();
-
-		std::string m_Reason;
-	};
-
 	class SAMPLE_RENDER_DLL_COMMAND GraphicsContext
 	{
 	public:
@@ -38,7 +27,8 @@ namespace SampleRender
 		
 		virtual void SetClearColor(float r, float g, float b, float a) = 0;
 
-		virtual uint32_t GetUniformAttachment() = 0;
+		virtual uint32_t GetUniformAttachment() const = 0;
+		virtual uint32_t GetSmallBufferAttachment() const = 0;
 
 		virtual void ReceiveCommands() = 0;
 		virtual void DispatchCommands() = 0;

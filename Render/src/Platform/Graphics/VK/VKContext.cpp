@@ -112,9 +112,14 @@ void SampleRender::VKContext::SetClearColor(float r, float g, float b, float a)
     m_ClearColor.float32[3] = a;
 }
 
-uint32_t SampleRender::VKContext::GetUniformAttachment()
+uint32_t SampleRender::VKContext::GetUniformAttachment() const
 {
     return m_UniformAttachment;
+}
+
+uint32_t SampleRender::VKContext::GetSmallBufferAttachment() const
+{
+    return 4;
 }
 
 void SampleRender::VKContext::ReceiveCommands()

@@ -7,16 +7,14 @@
 #include "VKContext.hpp"
 #include "VKShader.hpp"
 
-SampleRender::AttachmentMismatchException::AttachmentMismatchException(size_t bufferSize, size_t expectedBufferAttachment) :
-	GraphicsException()
+SampleRender::SizeMismatchException::SizeMismatchException(size_t layoutSize, size_t providedSize)
 {
 	std::stringstream buffer;
-	buffer << "Is expected the buffer be multiple of " << expectedBufferAttachment <<
-		", but the module of the division between the buffer size and the expected attachment is " << (bufferSize % expectedBufferAttachment);
+	buffer << "The expected size is: " << layoutSize << ", but the provided buffer size is: " << providedSize;
 	m_Reason = buffer.str();
 }
 
-SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, BufferLayout layout)
+SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout)
 {
 	GraphicsAPI api = Application::GetInstance()->GetCurrentAPI();
 	std::stringstream controller_path;
@@ -28,14 +26,14 @@ SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<Gr
 	{
 		controller_path << ".d3d12.json";
 		std::string json_controller_path = controller_path.str();
-		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout);
+		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout);
 	}
 #endif
 	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_VK:
 	{
 		controller_path << ".vk.json";
 		std::string json_controller_path = controller_path.str();
-		return new VKShader((const std::shared_ptr<VKContext>*)(context), json_controller_path, layout);
+		return new VKShader((const std::shared_ptr<VKContext>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout);
 	}
 	default:
 		break;

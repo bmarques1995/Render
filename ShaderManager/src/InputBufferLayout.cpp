@@ -1,4 +1,4 @@
-#include "BufferLayout.hpp"
+#include "InputBufferLayout.hpp"
 
 uint32_t SampleRender::ShaderDataTypeSize(ShaderDataType type)
 {
@@ -21,7 +21,7 @@ uint32_t SampleRender::ShaderDataTypeSize(ShaderDataType type)
 	return 0;
 }
 
-SampleRender::BufferElement::BufferElement()
+SampleRender::InputBufferElement::InputBufferElement()
 {
 	m_Name = "";
 	m_Type = ShaderDataType::None;
@@ -30,12 +30,12 @@ SampleRender::BufferElement::BufferElement()
 	m_Normalized = false;
 }
 
-SampleRender::BufferElement::BufferElement(ShaderDataType type, const std::string& name, bool normalized) :
+SampleRender::InputBufferElement::InputBufferElement(ShaderDataType type, const std::string& name, bool normalized) :
 	m_Name(name), m_Type(type), m_Size(ShaderDataTypeSize(type)), m_Offset(0), m_Normalized(normalized)
 {
 }
 
-uint32_t SampleRender::BufferElement::GetComponentCount() const
+uint32_t SampleRender::InputBufferElement::GetComponentCount() const
 {
 	switch (m_Type)
 	{
@@ -56,44 +56,44 @@ uint32_t SampleRender::BufferElement::GetComponentCount() const
 	return 0;
 }
 
-const std::string& SampleRender::BufferElement::GetName() const
+const std::string& SampleRender::InputBufferElement::GetName() const
 {
 	return m_Name;
 }
 
-const SampleRender::ShaderDataType SampleRender::BufferElement::GetType() const
+const SampleRender::ShaderDataType SampleRender::InputBufferElement::GetType() const
 {
 	return m_Type;
 }
 
-const uint32_t SampleRender::BufferElement::GetSize() const
+const uint32_t SampleRender::InputBufferElement::GetSize() const
 {
 	return m_Size;
 }
 
-const uint32_t SampleRender::BufferElement::GetOffset() const
+const uint32_t SampleRender::InputBufferElement::GetOffset() const
 {
 	return m_Offset;
 }
 
-const bool SampleRender::BufferElement::IsNormalized() const
+const bool SampleRender::InputBufferElement::IsNormalized() const
 {
 	return m_Normalized;
 }
 
-SampleRender::BufferLayout::BufferLayout(const std::initializer_list<BufferElement>& elements) :
+SampleRender::InputBufferLayout::InputBufferLayout(const std::initializer_list<InputBufferElement>& elements) :
 	m_Elements(elements)
 {
 	CalculateOffsetsAndStride();
 }
 
-SampleRender::BufferLayout::BufferLayout(const std::vector<BufferElement>& elements) :
+SampleRender::InputBufferLayout::InputBufferLayout(const std::vector<InputBufferElement>& elements) :
 	m_Elements(elements)
 {
 	CalculateOffsetsAndStride();
 }
 
-void SampleRender::BufferLayout::CalculateOffsetsAndStride()
+void SampleRender::InputBufferLayout::CalculateOffsetsAndStride()
 {
 	uint32_t offset = 0;
 	m_Stride = 0;

@@ -4,9 +4,6 @@
 
 namespace fs = std::filesystem;
 
-const uint32_t SampleRender::D3D12Shader::s_SmallAttachmentStride = 4;
-const uint32_t SampleRender::D3D12Shader::s_AttachmentStride = 256;
-
 const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> SampleRender::D3D12Shader::s_ShaderPusher =
 {
 	{"vs", [](IDxcBlob** blob, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)-> void
@@ -24,8 +21,8 @@ const std::list<std::string> SampleRender::D3D12Shader::s_GraphicsPipelineStages
 	"ps"
 };
 
-SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, BufferLayout layout) :
-	m_Context(context), m_Layout(layout)
+SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout) :
+	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout)
 {
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
@@ -62,12 +59,21 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.SampleDesc.Count = 1;
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	
-	
+	auto elements = m_UniformLayout.GetElements();
+		
+	for (auto& element : elements)
+	{
+		unsigned char* data = new unsigned char[element.second.GetSize()];
+		PreallocateCBuffer(data, element.second);
+		delete[] data;
+	}
 
 	for (auto it = s_GraphicsPipelineStages.begin(); it != s_GraphicsPipelineStages.end(); it++)
 	{
 		PushShader(*it, &graphicsDesc);
 	}
+
+	//D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
 
 	BuildBlender(&graphicsDesc);
 	BuildRasterizer(&graphicsDesc);
@@ -107,32 +113,21 @@ uint32_t SampleRender::D3D12Shader::GetOffset() const
 	return 0;
 }
 
-void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot, PushType pushType, size_t gpuOffset)
+void SampleRender::D3D12Shader::BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot)
 {
-	switch (pushType)
-	{
-	case SampleRender::PushType::PUSH_SMALL:
-	{
-		if (!Is32BitBufferValid(size))
-			throw AttachmentMismatchException(size, s_SmallAttachmentStride);
-		Bind32Buffer(data, size, bindingSlot, gpuOffset);
-		break;
-	}
-	case SampleRender::PushType::PUSH_UNIFORM_CONSTANT:
-	{
-		if (!IsCBufferValid(size))
-			throw AttachmentMismatchException(size, s_SmallAttachmentStride);
-		if (m_CBuffers.find(bindingSlot) == m_CBuffers.end())
-			PushCBuffer(data, size, bindingSlot);
-		else
-			MapCBuffer(data, size, bindingSlot);
-		BindCBuffer(bindingSlot);
-		break;
-	}
-	default:
-		throw GraphicsException("Invalid Push Type, it can be only PUSH_SMALL or PUSH_UNIFORM_CONSTANT");
-		break;
-	}
+	if(size != m_SmallBufferLayout.GetElement(bindingSlot).GetSize())
+		throw SizeMismatchException(size, m_SmallBufferLayout.GetElement(bindingSlot).GetSize());
+	auto cmdList = (*m_Context)->GetCurrentCommandList();
+	auto smallStride = (*m_Context)->GetSmallBufferAttachment();
+	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size / smallStride, data, m_SmallBufferLayout.GetElement(bindingSlot).GetOffset()/smallStride);
+}
+
+void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot)
+{
+	if (m_CBuffers.find(bindingSlot) == m_CBuffers.end())
+		return;
+	MapCBuffer(data, size, bindingSlot);
+	BindCBuffer(bindingSlot);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -202,27 +197,30 @@ void SampleRender::D3D12Shader::BuildDepthStencil(D3D12_GRAPHICS_PIPELINE_STATE_
 	graphicsDesc->DepthStencilState.BackFace = graphicsDesc->DepthStencilState.FrontFace;
 }
 
-void SampleRender::D3D12Shader::PushCBuffer(const void* data, size_t size, uint32_t bindingSlot)
+void SampleRender::D3D12Shader::PreallocateCBuffer(const void* data, UniformElement uniformElement)
 {
+	if (!IsCBufferValid(uniformElement.GetSize()))
+		throw AttachmentMismatchException(uniformElement.GetSize(), (*m_Context)->GetSmallBufferAttachment());
+
 	auto device = (*m_Context)->GetDevicePtr();
 	HRESULT hr;
 
-	m_CBuffers[bindingSlot] = { nullptr, {} };
+	m_CBuffers[uniformElement.GetBindingSlot()] = {nullptr, {}};
 
 	D3D12_DESCRIPTOR_HEAP_DESC cbvDescriptorHeapDesc{};
-	cbvDescriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	cbvDescriptorHeapDesc.Type = GetNativeHeapType(uniformElement.GetBufferType());
 	cbvDescriptorHeapDesc.NumDescriptors = 1;
 	cbvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	cbvDescriptorHeapDesc.NodeMask = 0;
 
-	hr = device->CreateDescriptorHeap(&cbvDescriptorHeapDesc, IID_PPV_ARGS(m_CBuffers[bindingSlot].Heap.GetAddressOf()));
+	hr = device->CreateDescriptorHeap(&cbvDescriptorHeapDesc, IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Heap.GetAddressOf()));
 	assert(hr == S_OK);
 
-	D3D12_CPU_DESCRIPTOR_HANDLE cbvHeapStartHandle = m_CBuffers[bindingSlot].Heap->GetCPUDescriptorHandleForHeapStart();
+	D3D12_CPU_DESCRIPTOR_HANDLE cbvHeapStartHandle = m_CBuffers[uniformElement.GetBindingSlot()].Heap->GetCPUDescriptorHandleForHeapStart();
 
 	D3D12_RESOURCE_DESC1 constantBufferDesc = {};
-	constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-	constantBufferDesc.Width = size;
+	constantBufferDesc.Dimension = GetNativeDimension(uniformElement.GetBufferType());
+	constantBufferDesc.Width = uniformElement.GetSize();
 	constantBufferDesc.Height = 1;
 	constantBufferDesc.DepthOrArraySize = 1;
 	constantBufferDesc.MipLevels = 1;
@@ -246,18 +244,18 @@ void SampleRender::D3D12Shader::PushCBuffer(const void* data, size_t size, uint3
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		nullptr,
-		IID_PPV_ARGS(m_CBuffers[bindingSlot].Resource.GetAddressOf()));
+		IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Resource.GetAddressOf()));
 	
 	assert(hr == S_OK);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;
 
-	cbvDesc.BufferLocation = m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress();
-	cbvDesc.SizeInBytes = size;
+	cbvDesc.BufferLocation = m_CBuffers[uniformElement.GetBindingSlot()].Resource->GetGPUVirtualAddress();
+	cbvDesc.SizeInBytes = uniformElement.GetSize();
 
 	device->CreateConstantBufferView(&cbvDesc, cbvHeapStartHandle);
 
-	MapCBuffer(data, size, bindingSlot);
+	MapCBuffer(data, uniformElement.GetSize(), uniformElement.GetBindingSlot());
 }
 
 void SampleRender::D3D12Shader::MapCBuffer(const void* data, size_t size, uint32_t bindingSlot)
@@ -271,10 +269,11 @@ void SampleRender::D3D12Shader::MapCBuffer(const void* data, size_t size, uint32
 	m_CBuffers[bindingSlot].Resource->Unmap(0, NULL);
 }
 
-void SampleRender::D3D12Shader::Bind32Buffer(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
+void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
 {
 	auto cmdList = (*m_Context)->GetCurrentCommandList();
-	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/s_SmallAttachmentStride, data, offset%s_SmallAttachmentStride);
+	auto smallStride = (*m_Context)->GetSmallBufferAttachment();
+	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/ smallStride, data, offset/smallStride);
 }
 
 void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
@@ -285,14 +284,14 @@ void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
 	cmdList->SetGraphicsRootConstantBufferView(bindingSlot, m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress());
 }
 
-bool SampleRender::D3D12Shader::Is32BitBufferValid(size_t size)
+bool SampleRender::D3D12Shader::IsSmallBufferValid(size_t size)
 {
-	return ((size % s_SmallAttachmentStride) == 0);
+	return ((size % (*m_Context)->GetSmallBufferAttachment()) == 0);
 }
 
 bool SampleRender::D3D12Shader::IsCBufferValid(size_t size)
 {
-	return ((size % s_AttachmentStride) == 0);
+	return ((size % (*m_Context)->GetUniformAttachment()) == 0);
 }
 
 void SampleRender::D3D12Shader::PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc)
@@ -353,5 +352,29 @@ DXGI_FORMAT SampleRender::D3D12Shader::GetNativeFormat(ShaderDataType type)
 	case ShaderDataType::Uint4: return DXGI_FORMAT_R32G32B32A32_UINT;
 	case ShaderDataType::Bool: return DXGI_FORMAT_R8_UINT;
 	default: return DXGI_FORMAT_UNKNOWN;
+	}
+}
+
+D3D12_DESCRIPTOR_HEAP_TYPE SampleRender::D3D12Shader::GetNativeHeapType(BufferType type)
+{
+	switch (type)
+	{
+	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+		return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	default:
+	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+		return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+	}
+}
+
+D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeDimension(BufferType type)
+{
+	switch (type)
+	{
+	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+		return D3D12_RESOURCE_DIMENSION_BUFFER;
+	default:
+	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+		return D3D12_RESOURCE_DIMENSION_UNKNOWN;
 	}
 }

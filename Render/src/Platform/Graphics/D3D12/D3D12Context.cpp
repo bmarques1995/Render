@@ -49,9 +49,14 @@ void SampleRender::D3D12Context::SetClearColor(float r, float g, float b, float 
 	m_ClearColor.Color[3] = a;
 }
 
-uint32_t SampleRender::D3D12Context::GetUniformAttachment()
+uint32_t SampleRender::D3D12Context::GetUniformAttachment() const
 {
 	return 256;
+}
+
+uint32_t SampleRender::D3D12Context::GetSmallBufferAttachment() const
+{
+	return 4;
 }
 
 void SampleRender::D3D12Context::ReceiveCommands()

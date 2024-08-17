@@ -47,13 +47,23 @@ SampleRender::Application::Application(std::string programLocation) :
 		Console::CoreError("{}", e.what());
 	}
 
-	BufferLayout layout(
+	InputBufferLayout layout(
 	{
 		{ShaderDataType::Float3, "POSITION", false},
 		{ShaderDataType::Float4, "COLOR", false}
 	});
 
-	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout));
+	SmallBufferLayout smallBufferLayout(
+	{
+		{ 0, 192, 0, m_Context->GetSmallBufferAttachment() }
+	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
+
+	UniformLayout uniformLayout(
+	{
+		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, m_Context->GetUniformAttachment() }
+	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
+
+	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
 	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) &vBuffer[0], sizeof(vBuffer), layout.GetStride()));
 	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }
@@ -76,16 +86,23 @@ void SampleRender::Application::Run()
 		m_Window->Update();
 		if (!m_Window->IsMinimized())
 		{
-			m_Context->ReceiveCommands();
-			m_Shader->Stage();
-			m_Shader->BindUniforms(&m_SmallMVP.model(0,0), sizeof(m_SmallMVP), 0, PushType::PUSH_SMALL, 0);
-			m_Shader->BindUniforms(&m_CompleteMVP.model(0,0), sizeof(m_CompleteMVP), 1, PushType::PUSH_UNIFORM_CONSTANT, 0);
-			m_VertexBuffer->Stage();
-			m_IndexBuffer->Stage();
-			m_Context->StageViewportAndScissors();
-			m_Context->Draw(m_IndexBuffer->GetCount());
-			m_Context->DispatchCommands();
-			m_Context->Present();
+			try {
+				m_Context->ReceiveCommands();
+				m_Shader->Stage();
+				m_Shader->BindSmallBuffer(&m_SmallMVP.model(0, 0), sizeof(m_SmallMVP), 0);
+				m_Shader->BindUniforms(&m_CompleteMVP.model(0, 0), sizeof(m_CompleteMVP), 1);
+				m_VertexBuffer->Stage();
+				m_IndexBuffer->Stage();
+				m_Context->StageViewportAndScissors();
+				m_Context->Draw(m_IndexBuffer->GetCount());
+				m_Context->DispatchCommands();
+				m_Context->Present();
+			}
+			catch (GraphicsException e)
+			{
+				Console::CoreError("Caught error: {}", e.what());
+				exit(2);
+			}
 		}
 	}
 }
