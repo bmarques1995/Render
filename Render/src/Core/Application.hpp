@@ -13,6 +13,7 @@
 #include "SPVCompiler.hpp"
 #include "Shader.hpp"
 #include "Buffer.hpp"
+#include "Image.hpp"
 #include "ApplicationStarter.hpp"
 #include <Eigen/Eigen>
 

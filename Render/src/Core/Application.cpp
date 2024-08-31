@@ -26,6 +26,7 @@ SampleRender::Application::Application(std::string programLocation) :
 		Eigen::Matrix4f::Identity(),
 		Eigen::Matrix4f::Identity()
 	};
+	auto img = Image::CreateImage("./assets/textures/sample.png");
 	m_Starter.reset(new ApplicationStarter("render.json"));
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));

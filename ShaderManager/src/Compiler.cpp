@@ -335,6 +335,7 @@ void SampleRender::Compiler::PushShaderPath(std::string filepath)
 	std::smatch matches;
 
 	// Check if the input matches the pattern
+	// Optimization, eliminate matches attribution, was only for tests
 	if (std::regex_match(filepath, matches, pattern))
 	{
 		std::stringstream buffer;
