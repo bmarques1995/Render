@@ -39,14 +39,14 @@ namespace SampleRender
 
 	private:
 
-		float vBuffer[42] =
+		Eigen::Vector<float, 7> vBuffer[6] =
 		{
-			.0f, .5f, .2f, 1.0f, .0f, .0f, 1.0f,
-			.5f, -.5f, .2f, .0f, 1.0f, .0f, 1.0f,
-			-.5f, -.5f, .2f, .0f, .0f, 1.0f, 1.0f,
-			.0f, .4f, .6f, 1.0f, 1.0f, .0f, 1.0f,
-			.4f, -.4f, .6f, .0f, 1.0f, 1.0f, 1.0f,
-			-.4f, -.4f, .6f, 1.0f, .0f, 1.0f, 1.0f,
+			{ .0f, .5f, .2f,  1.0f, .0f, .0f, 1.0f },
+			{ .5f, -.5f, .2f,  .0f, 1.0f, .0f, 1.0f },
+			{ -.5f, -.5f, .2f,  .0f, .0f, 1.0f, 1.0f },
+			{ .0f, .4f, .6f,  1.0f, 1.0f, .0f, 1.0f },
+			{ .4f, -.4f, .6f,  .0f, 1.0f, 1.0f, 1.0f },
+			{ -.4f, -.4f, .6f,  1.0f, .0f, 1.0f, 1.0f },
 		};
 
 		uint32_t iBuffer[6] =

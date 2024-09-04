@@ -28,8 +28,9 @@ namespace SampleRender
 		virtual uint32_t GetChannels() const;
 		virtual uint32_t GetMips() const;
 
-		static std::shared_ptr<Image> CreateImage(std::string_view path);
-		static std::shared_ptr<Image> CreateImage(const std::byte* buffer, size_t dataSize, ImageFormat format);
+		static Image* CreateImage(std::string_view path);
+		static Image* CreateImage(const std::byte* buffer, size_t dataSize, ImageFormat format);
+		static Image* CreateImage(const std::byte* buffer, uint32_t width, uint32_t height, ImageFormat format);
 
 		static void CastBMPToPNG(const unsigned char* pixels, uint32_t width, uint32_t height, unsigned char** buffer, size_t* bufferSize, bool flipVertically = false);
 		static void CastBMPToJPEG(const unsigned char* pixels, uint32_t width, uint32_t height, unsigned char** buffer, size_t* bufferSize, uint32_t quality, bool flipVertically = false);

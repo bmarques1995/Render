@@ -7,6 +7,8 @@
 #include "Application.hpp"
 #include "Console.hpp"
 #include "CompilerExceptions.hpp"
+#include <TextureLayout.hpp>
+#include <SamplerLayout.hpp>
 
 SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
 bool SampleRender::Application::s_SingletonEnabled = false;
@@ -26,7 +28,8 @@ SampleRender::Application::Application(std::string programLocation) :
 		Eigen::Matrix4f::Identity(),
 		Eigen::Matrix4f::Identity()
 	};
-	auto img = Image::CreateImage("./assets/textures/sample.png");
+
+	
 	m_Starter.reset(new ApplicationStarter("render.json"));
 	m_Window.reset(Window::Instantiate());
 	m_Context.reset(GraphicsContext::Instantiate(m_Window.get(), 3));
@@ -64,8 +67,21 @@ SampleRender::Application::Application(std::string programLocation) :
 		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, m_Context->GetUniformAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
+	std::shared_ptr<Image> img;
+	img.reset(Image::CreateImage("./assets/textures/sample.png"));
+	TextureLayout textureLayout(
+		{ 
+			{img, 0, TextureTensor::TENSOR_2, 1}
+		}
+	);
+	SamplerLayout samplerLayout(
+		{
+			{SamplerFilter::LINEAR, AnisotropicFactor::FACTOR_4, AddressMode::BORDER, ComparisonPassMode::ALWAYS, 0}
+		}
+	);
+
 	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
-	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) &vBuffer[0], sizeof(vBuffer), layout.GetStride()));
+	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) vBuffer, sizeof(vBuffer), layout.GetStride()));
 	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }
 

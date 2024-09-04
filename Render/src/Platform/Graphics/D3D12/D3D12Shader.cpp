@@ -276,6 +276,81 @@ void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t s
 	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/ smallStride, data, offset/smallStride);
 }
 
+void SampleRender::D3D12Shader::AllocateTexture()
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	ComPointer<ID3D12Resource2> texture;
+	ComPointer<ID3D12DescriptorHeap> textureHeap;
+
+	auto texture_width = 1u;
+	D3D12_RESOURCE_DESC1 constantBufferDesc = {};
+	constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	constantBufferDesc.Width = texture_width; //mandatory
+	constantBufferDesc.Height = 1; // mandatory 2 and 3
+	constantBufferDesc.DepthOrArraySize = 1; // mandatory 3
+	constantBufferDesc.MipLevels = 1; // param
+	constantBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	constantBufferDesc.SampleDesc.Count = 1;
+	constantBufferDesc.SampleDesc.Quality = 0;
+	constantBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+	constantBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;
+
+	hr = device->CreateCommittedResource2(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&constantBufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		nullptr,
+		IID_PPV_ARGS(texture.GetAddressOf()));
+
+	assert(hr == S_OK);
+
+	auto cbvHeapStartHandle = textureHeap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+	device->CreateShaderResourceView(texture, &srvDesc, cbvHeapStartHandle);
+
+	D3D12_RANGE readRange = { 0 };
+	void* gpuData = nullptr;
+	hr = texture->Map(0, &readRange, &gpuData);
+	assert(hr == S_OK);
+	memcpy(gpuData, nullptr, 0);
+	texture->Unmap(0, NULL);
+}
+
+void SampleRender::D3D12Shader::AllocateSampler()
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	ComPointer<ID3D12DescriptorHeap> samplerHeap;
+
+	D3D12_STATIC_SAMPLER_DESC;
+	D3D12_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+
+	device->CreateSampler(&samplerDesc, samplerHeap->GetCPUDescriptorHandleForHeapStart());
+}
+
 void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
 {
 	auto cmdList = (*m_Context)->GetCurrentCommandList();

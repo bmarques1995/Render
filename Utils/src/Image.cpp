@@ -50,23 +50,33 @@ uint32_t SampleRender::Image::GetMips() const
 	return mipLevels;
 }
 
-std::shared_ptr<SampleRender::Image> SampleRender::Image::CreateImage(std::string_view path)
+SampleRender::Image* SampleRender::Image::CreateImage(std::string_view path)
 {
 	ImageFormat format = GetImageFormat(path);
 	switch (format)
 	{
-	case SampleRender::ImageFormat::PNG: return std::make_shared<PNGImage>(path);
-	case SampleRender::ImageFormat::JPEG: return std::make_shared<JPEGImage>(path);
+	case SampleRender::ImageFormat::PNG: return new PNGImage(path);
+	case SampleRender::ImageFormat::JPEG: return new JPEGImage(path);
 	default: return nullptr;
 	}
 }
 
-std::shared_ptr<SampleRender::Image> SampleRender::Image::CreateImage(const std::byte* buffer, size_t dataSize, ImageFormat format)
+SampleRender::Image* SampleRender::Image::CreateImage(const std::byte* buffer, size_t dataSize, ImageFormat format)
 {
 	switch (format)
 	{
-	case SampleRender::ImageFormat::PNG: return std::make_shared<PNGImage>(buffer, dataSize);
-	case SampleRender::ImageFormat::JPEG: return std::make_shared<JPEGImage>(buffer, dataSize);
+	case SampleRender::ImageFormat::PNG: return new PNGImage(buffer, dataSize);
+	case SampleRender::ImageFormat::JPEG: return new JPEGImage(buffer, dataSize);
+	default: return nullptr;
+	}
+}
+
+SampleRender::Image* SampleRender::Image::CreateImage(const std::byte* buffer, uint32_t width, uint32_t height, ImageFormat format)
+{
+	switch (format)
+	{
+	case SampleRender::ImageFormat::PNG: return new PNGImage(buffer, width, height);
+	case SampleRender::ImageFormat::JPEG: return new JPEGImage(buffer, width, height);
 	default: return nullptr;
 	}
 }

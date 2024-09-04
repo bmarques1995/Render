@@ -46,6 +46,9 @@ namespace SampleRender
 		void CreateDescriptorSetLayout();
 		void CreateDescriptorPool();
 
+		void CreateTexture();
+		void CreateSampler();
+
 		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
 		void PushShader(std::string_view stage, VkPipelineShaderStageCreateInfo* graphicsDesc);

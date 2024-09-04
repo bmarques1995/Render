@@ -42,6 +42,9 @@ namespace SampleRender
 		bool IsSmallBufferValid(size_t size);
 		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
+		void AllocateTexture();
+		void AllocateSampler();
+
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 		void InitJsonAndPaths(std::string json_controller_path);
 

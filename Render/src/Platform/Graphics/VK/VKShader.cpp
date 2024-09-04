@@ -57,20 +57,20 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     auto nativeElements = m_Layout.GetElements();
-    VkVertexInputAttributeDescription* ied = new VkVertexInputAttributeDescription[nativeElements.size()];
+    VkVertexInputAttributeDescription* iad = new VkVertexInputAttributeDescription[nativeElements.size()];
 
     for (size_t i = 0; i < nativeElements.size(); i++)
     {
-        ied[i].binding = 0;
-        ied[i].location = i;
-        ied[i].format = GetNativeFormat(nativeElements[i].GetType());
-        ied[i].offset = nativeElements[i].GetOffset();
+        iad[i].binding = 0;
+        iad[i].location = i;
+        iad[i].format = GetNativeFormat(nativeElements[i].GetType());
+        iad[i].offset = nativeElements[i].GetOffset();
     }
 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.vertexAttributeDescriptionCount = m_Layout.GetElements().size();
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputInfo.pVertexAttributeDescriptions = ied;
+    vertexInputInfo.pVertexAttributeDescriptions = iad;
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     VkPipelineViewportStateCreateInfo viewportState{};
@@ -157,7 +157,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
         it->second = nullptr;
     }
 
-    delete[] ied;
+    delete[] iad;
 }
 
 SampleRender::VKShader::~VKShader()
@@ -343,6 +343,14 @@ void SampleRender::VKShader::CreateDescriptorPool()
 
     vkr = vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
     assert(vkr == VK_SUCCESS);
+}
+
+void SampleRender::VKShader::CreateTexture()
+{
+}
+
+void SampleRender::VKShader::CreateSampler()
+{
 }
 
 void SampleRender::VKShader::CreateDescriptorSet(UniformElement uniformElement)

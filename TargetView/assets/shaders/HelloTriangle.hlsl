@@ -3,8 +3,10 @@
 
 #define rs_controller \
 RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
-RootConstants(num32BitConstants=48, b0, space=0), \
-CBV(b1)
+RootConstants(num32BitConstants=48, b0), \
+CBV(b1), \
+SRV(t0), \
+DescriptorTable(Sampler(s0, numDescriptors = 1)) \
 //DescriptorTable(CBV(b1))
 
 struct SmallMVP

@@ -10,6 +10,7 @@ namespace SampleRender
 	public:
 		PNGImage(std::string_view path);
 		PNGImage(const std::byte* buffer, size_t size);
+		PNGImage(const std::byte* rawBuffer, uint32_t width, uint32_t height);
 		virtual ~PNGImage();
 
 	private:

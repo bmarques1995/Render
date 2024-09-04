@@ -12,6 +12,15 @@ SampleRender::PNGImage::PNGImage(const std::byte* buffer, size_t size)
 	LoadPNGFromMemory(buffer, size);
 }
 
+SampleRender::PNGImage::PNGImage(const std::byte* rawBuffer, uint32_t width, uint32_t height)
+{
+	m_Width = width;
+	m_Height = height;
+	m_Channels = 4;
+	m_Data = new uint8_t[4 * width * height];
+	memcpy(m_Data, rawBuffer, (4 * width * height));
+}
+
 SampleRender::PNGImage::~PNGImage()
 {
 	delete[] m_Data;

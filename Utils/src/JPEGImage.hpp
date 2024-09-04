@@ -10,6 +10,7 @@ namespace SampleRender
 	public:
 		JPEGImage(std::string_view path);
 		JPEGImage(const std::byte* data, size_t size);
+		JPEGImage(const std::byte* rawBuffer, uint32_t width, uint32_t height);
 		~JPEGImage();
 	private:
 		void LoadJPEGFromFile(std::string_view path);
