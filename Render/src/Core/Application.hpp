@@ -39,20 +39,18 @@ namespace SampleRender
 
 	private:
 
-		Eigen::Vector<float, 7> vBuffer[6] =
+		Eigen::Vector<float, 9> vBuffer[6] =
 		{
-			{ .0f, .5f, .2f,  1.0f, .0f, .0f, 1.0f },
-			{ .5f, -.5f, .2f,  .0f, 1.0f, .0f, 1.0f },
-			{ -.5f, -.5f, .2f,  .0f, .0f, 1.0f, 1.0f },
-			{ .0f, .4f, .6f,  1.0f, 1.0f, .0f, 1.0f },
-			{ .4f, -.4f, .6f,  .0f, 1.0f, 1.0f, 1.0f },
-			{ -.4f, -.4f, .6f,  1.0f, .0f, 1.0f, 1.0f },
+			{ -.5f, -.5f, .2f,  .0f, 1.0f, .0f, 1.0f,  0.0f, 1.0f },
+			{ -.5f, .5f, .2f,  .0f, .0f, 1.0f, 1.0f,  0.0f, 0.0f },
+			{ .5f, -.5f, .2f,  1.0f, .0f, 1.0f, 1.0f,  1.0f, 1.0f },
+			{ .5f, .5f, .2f,  .0f, .0f, .0f, 1.0f,  1.0f, 0.0f },
 		};
 
 		uint32_t iBuffer[6] =
 		{
-			3,4,5,
 			0,1,2,
+			3,2,1,
 		};
 
 		struct SmallMVP

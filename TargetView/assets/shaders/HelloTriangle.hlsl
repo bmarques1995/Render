@@ -5,7 +5,7 @@
 RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
 RootConstants(num32BitConstants=48, b0), \
 CBV(b1), \
-SRV(t0), \
+DescriptorTable(SRV(t0, numDescriptors = 1)), \
 DescriptorTable(Sampler(s0, numDescriptors = 1)) \
 //DescriptorTable(CBV(b1))
 
@@ -47,12 +47,14 @@ struct VSInput
 {
     [[vk::location(0)]]float3 pos : POSITION;
     [[vk::location(1)]]float4 col : COLOR;
+    [[vk::location(2)]]float2 txc : TEXCOORD;
 };
 
 struct PSInput
 {
 	float4 pos : SV_POSITION;
 	float4 col : COLOR;
+    float2 txc : TEXCOORD;
 };
 
 PSInput vs_main(VSInput vsInput)
@@ -72,10 +74,11 @@ PSInput vs_main(VSInput vsInput)
         vsoutput.pos = mul(vsoutput.pos, m_SmallMVP.P);
     }
     vsoutput.col = vsInput.col;
+    vsoutput.txc = vsInput.txc;
 	return vsoutput;
 }
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-	return psInput.col;
+    return float4(psInput.txc, .0f, 1.0f);
 }
