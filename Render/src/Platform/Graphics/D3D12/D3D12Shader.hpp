@@ -28,6 +28,8 @@ namespace SampleRender
 		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot) override;
 
 	private:
+		void CreateCopyPipeline();
+		void WaitCopyPipeline();
 
 		void CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device);
 		void BuildBlender(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
@@ -63,6 +65,13 @@ namespace SampleRender
 
 		Json::Value m_PipelineInfo;
 
+		ComPointer<ID3D12CommandAllocator> m_BufferCommandAllocator;
+		ComPointer<ID3D12CommandQueue> m_BufferCommandQueue;
+		ComPointer<ID3D12GraphicsCommandList6> m_BufferCommandList;
+		ComPointer<ID3D12Fence> m_BufferFence;
+		uint64_t m_BufferFenceValue = 0;
+		HANDLE m_BufferFenceEvent;
+
 		InputBufferLayout m_Layout;
 		SmallBufferLayout m_SmallBufferLayout;
 		UniformLayout m_UniformLayout;
@@ -74,5 +83,6 @@ namespace SampleRender
 		ComPointer<ID3D12PipelineState> m_GraphicsPipeline;
 		std::unordered_map<std::string, ComPointer<IDxcBlob>> m_ShaderBlobs;
 		ComPointer<ID3D12RootSignature> m_RootSignature;
+
 	};
 }

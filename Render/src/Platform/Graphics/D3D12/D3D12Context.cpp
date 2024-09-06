@@ -147,36 +147,6 @@ ID3D12GraphicsCommandList6* SampleRender::D3D12Context::GetCurrentCommandList() 
 	return m_CommandLists[m_CurrentBufferIndex].GetConst();
 }
 
-ID3D12CommandQueue* SampleRender::D3D12Context::GetCommandQueue() const
-{
-	return m_CommandQueue.GetConst();
-}
-
-ID3D12CommandAllocator* SampleRender::D3D12Context::GetCurrentCommandAllocator() const
-{
-	return m_CommandAllocators[m_CurrentBufferIndex].GetConst();
-}
-
-ID3D12GraphicsCommandList6* SampleRender::D3D12Context::GetBufferCommandList() const
-{
-	return m_BufferCommandList.GetConst();
-}
-
-ID3D12CommandAllocator* SampleRender::D3D12Context::GetBufferCommandAllocator() const
-{
-	return m_BufferCommandAllocator.GetConst();
-}
-
-ID3D12Fence* SampleRender::D3D12Context::GetCommandQueueFence() const
-{
-	return m_CommandQueueFence.GetConst();
-}
-
-HANDLE SampleRender::D3D12Context::GetCommandQueueFenceEvent() const
-{
-	return m_CommandQueueFenceEvent;
-}
-
 const std::string SampleRender::D3D12Context::GetGPUName()
 {
 	DXGI_ADAPTER_DESC gpuDescription;
@@ -313,8 +283,6 @@ void SampleRender::D3D12Context::CreateCommandAllocator()
 	{
 		m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CommandAllocators[i].GetAddressOf()));
 	}
-	m_Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_BufferCommandAllocator.GetAddressOf()));
-	
 }
 
 void SampleRender::D3D12Context::CreateCommandList()
@@ -324,7 +292,6 @@ void SampleRender::D3D12Context::CreateCommandList()
 	{
 		m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocators[i].Get(), nullptr, IID_PPV_ARGS(m_CommandLists[i].GetAddressOf()));
 	}
-	m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_BufferCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_BufferCommandList.GetAddressOf()));
 }
 
 void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32_t height)

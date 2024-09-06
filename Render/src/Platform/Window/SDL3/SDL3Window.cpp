@@ -1,6 +1,7 @@
 #include "SDL3Window.hpp"
 #include <cassert>
 #include <windows.h>
+#include "Console.hpp"
 
 SampleRender::SDL3Window::SDL3Window(uint32_t width, uint32_t height, std::string_view title):
 	m_Width(width), m_Height(height), m_Title(title), m_Minimized(false), m_ShouldClose(false), m_FullScreen(false)
@@ -8,7 +9,8 @@ SampleRender::SDL3Window::SDL3Window(uint32_t width, uint32_t height, std::strin
 	int result;
 	m_Resizer = nullptr;
 	result = SDL_Init(SDL_INIT_EVENTS);
-	assert(result == 0);
+	Console::CoreLog("{}", SDL_GetError());
+	assert(result >= 0);
 
 	Uint32 window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN;
 	m_Window = SDL_CreateWindow(m_Title.c_str(), width, height, window_flags);

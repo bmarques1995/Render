@@ -28,6 +28,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	auto device = (*m_Context)->GetDevicePtr();
 
 	InitJsonAndPaths(json_controller_path);
+	CreateCopyPipeline();
 
 	auto nativeElements = m_Layout.GetElements();
 	D3D12_INPUT_ELEMENT_DESC *ied = new D3D12_INPUT_ELEMENT_DESC[nativeElements.size()];
@@ -135,6 +136,40 @@ void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint
 		return;
 	MapCBuffer(data, size, bindingSlot);
 	BindCBuffer(bindingSlot);
+}
+
+void SampleRender::D3D12Shader::CreateCopyPipeline()
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	D3D12_COMMAND_QUEUE_DESC queueDesc{};
+	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	queueDesc.NodeMask = 0;
+	device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_BufferCommandQueue.GetAddressOf()));
+
+	device->CreateFence(m_BufferFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_BufferFence.GetAddressOf()));
+
+	m_BufferFenceEvent = CreateEventW(nullptr, false, false, nullptr);
+
+	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_BufferCommandAllocator.GetAddressOf()));
+
+	device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_BufferCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_BufferCommandList.GetAddressOf()));
+}
+
+void SampleRender::D3D12Shader::WaitCopyPipeline()
+{
+	m_BufferCommandQueue->Signal(m_BufferFence, 1);
+	auto test = m_BufferFence->GetCompletedValue();
+	if (m_BufferFence->GetCompletedValue() < 1)
+	{
+		m_BufferFence->SetEventOnCompletion(1, m_BufferFenceEvent);
+		WaitForSingleObject(m_BufferFenceEvent, INFINITE);
+	}
+
+	CloseHandle(m_BufferFenceEvent);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -376,8 +411,6 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 {
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
-	auto cmdList = (*m_Context)->GetBufferCommandList();
-	auto cmdQueue = (*m_Context)->GetCommandQueue();
 	ComPointer<ID3D12Resource2> textureBuffer;
 
 	D3D12_RESOURCE_DESC uploadBufferDesc = {};
@@ -441,9 +474,9 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	cmdList->ResourceBarrier(1, &barrier);
+	m_BufferCommandList->ResourceBarrier(1, &barrier);
 
-	cmdList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
+	m_BufferCommandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
 
 	// Transition the resource to PIXEL_SHADER_RESOURCE for sampling
 	
@@ -452,29 +485,17 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	cmdList->ResourceBarrier(1, &barrier);
+	m_BufferCommandList->ResourceBarrier(1, &barrier);
 
-	cmdList->Close();
+	m_BufferCommandList->Close();
 
-	ID3D12CommandList* lists[] = { cmdList };
-	cmdQueue->ExecuteCommandLists(1, lists);
+	ID3D12CommandList* lists[] = { m_BufferCommandList };
+	m_BufferCommandQueue->ExecuteCommandLists(1, lists);
 
-	ID3D12Fence* fence = (*m_Context)->GetCommandQueueFence();
-	HANDLE event = (*m_Context)->GetCommandQueueFenceEvent();
+	WaitCopyPipeline();
 
-	cmdQueue->Signal(fence, 1);
-	auto test = fence->GetCompletedValue();
-	if (fence->GetCompletedValue() < 1)
-	{
-		fence->SetEventOnCompletion(1, event);
-		WaitForSingleObject(event, INFINITE);
-	}
-
-	CloseHandle(event);
-
-	auto cmdAllocator = (*m_Context)->GetBufferCommandAllocator();
-	cmdAllocator->Reset();
-	cmdList->Reset(cmdAllocator, nullptr);
+	m_BufferCommandAllocator->Reset();
+	m_BufferCommandList->Reset(m_BufferCommandAllocator, nullptr);
 }
 
 void SampleRender::D3D12Shader::AllocateSampler()
