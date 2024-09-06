@@ -198,3 +198,9 @@ void SampleRender::Image::CastBMPToJPEG(const unsigned char* pixels, uint32_t wi
 	delete[] rgbBuffer;
 	jpeg_destroy_compress(&cinfo);
 }
+
+void SampleRender::Image::PostLoadAssert()
+{
+	assert(m_Channels == 4);
+	assert((m_Width % 64) == 0);
+}

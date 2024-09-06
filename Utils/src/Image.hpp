@@ -40,6 +40,8 @@ namespace SampleRender
 		uint32_t m_Height;
 		uint32_t m_Channels;
 
+		void PostLoadAssert();
+
 		unsigned char* m_Data;
 
 	private:

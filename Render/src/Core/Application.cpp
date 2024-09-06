@@ -69,15 +69,15 @@ SampleRender::Application::Application(std::string programLocation) :
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
 	std::shared_ptr<Image> img;
-	img.reset(Image::CreateImage("./assets/textures/sample.png"));
+	img.reset(Image::CreateImage("./assets/textures/yor.png"));
 	TextureLayout textureLayout(
 		{ 
-			{img, 0, TextureTensor::TENSOR_2, 1}
+			{img, 2, TextureTensor::TENSOR_2, 1}
 		}
 	);
 	SamplerLayout samplerLayout(
 		{
-			{SamplerFilter::LINEAR, AnisotropicFactor::FACTOR_4, AddressMode::BORDER, ComparisonPassMode::ALWAYS, 0}
+			{SamplerFilter::LINEAR, AnisotropicFactor::FACTOR_4, AddressMode::BORDER, ComparisonPassMode::ALWAYS, 3}
 		}
 	);
 
@@ -109,6 +109,7 @@ void SampleRender::Application::Run()
 				m_Shader->Stage();
 				m_Shader->BindSmallBuffer(&m_SmallMVP.model(0, 0), sizeof(m_SmallMVP), 0);
 				m_Shader->BindUniforms(&m_CompleteMVP.model(0, 0), sizeof(m_CompleteMVP), 1);
+				m_Shader->BindTexture(2);
 				m_VertexBuffer->Stage();
 				m_IndexBuffer->Stage();
 				m_Context->StageViewportAndScissors();

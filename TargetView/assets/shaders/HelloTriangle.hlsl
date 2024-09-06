@@ -8,7 +8,7 @@ CBV(b1), \
 DescriptorTable(SRV(t0, numDescriptors = 1)), \
 DescriptorTable(Sampler(s0, numDescriptors = 1)), \
 StaticSampler( s2,\
-                filter = FILTER_MIN_MAG_MIP_POINT,\
+                filter = FILTER_ANISOTROPIC,\
                 addressU = TEXTURE_ADDRESS_WRAP,\
                 addressV = TEXTURE_ADDRESS_WRAP,\
                 addressW = TEXTURE_ADDRESS_WRAP,\
@@ -96,6 +96,6 @@ PSInput vs_main(VSInput vsInput)
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-    return textureChecker.SampleLevel(staticSampler, psInput.txc, 0.0f);
-    //return float4(psInput.txc, .0f, 1.0f);
+    float4 pixel = textureChecker.SampleLevel(staticSampler, psInput.txc, 0.0f);
+    return float4(psInput.col.xyzw * pixel.xyzw);
 }

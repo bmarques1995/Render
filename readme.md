@@ -38,3 +38,12 @@ you can edit the json file and edit the graphics API property, with the followin
 
 - `SAMPLE_RENDER_GRAPHICS_API_VK`
 - `SAMPLE_RENDER_GRAPHICS_API_D3D12`
+
+# Testing Textures
+
+You can use different textures to test this program, but there is 2 rules that will crash the application if not followed:
+
+- Is only allowed textures with 4 channels
+- The width must be a multiple of 64, what means that (width%64 == 0)
+
+In the future i will allow textures with 1 channel and a width multiple of 256, This is a D3D12 alignment condition

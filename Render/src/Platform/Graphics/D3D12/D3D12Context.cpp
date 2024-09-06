@@ -28,6 +28,7 @@ SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t fr
 SampleRender::D3D12Context::~D3D12Context()
 {
 	FlushQueue();
+	m_CommandQueueFence.Release();
 	delete[] m_CommandLists;
 	delete[] m_CommandAllocators;
 	m_DepthStencilView.Release();

@@ -5,11 +5,13 @@
 SampleRender::PNGImage::PNGImage(std::string_view path)
 {
 	LoadPNGFromFile(path);
+	PostLoadAssert();
 }
 
 SampleRender::PNGImage::PNGImage(const std::byte* buffer, size_t size)
 {
 	LoadPNGFromMemory(buffer, size);
+	PostLoadAssert();
 }
 
 SampleRender::PNGImage::PNGImage(const std::byte* rawBuffer, uint32_t width, uint32_t height)

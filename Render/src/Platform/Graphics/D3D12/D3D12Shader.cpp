@@ -102,6 +102,11 @@ SampleRender::D3D12Shader::~D3D12Shader()
 		i.second.Resource.Release();
 		i.second.Heap.Release();
 	}
+	for (auto& i : m_Textures)
+	{
+		i.second.Resource.Release();
+		i.second.Heap.Release();
+	}	
 }
 
 void SampleRender::D3D12Shader::Stage()
@@ -136,6 +141,13 @@ void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint
 		return;
 	MapCBuffer(data, size, bindingSlot);
 	BindCBuffer(bindingSlot);
+}
+
+void SampleRender::D3D12Shader::BindTexture(uint32_t bindingSlot)
+{
+	auto cmdList = (*m_Context)->GetCurrentCommandList();
+	cmdList->SetDescriptorHeaps(1, m_Textures[bindingSlot].Heap.GetAddressOf());
+	cmdList->SetGraphicsRootDescriptorTable(bindingSlot, m_Textures[bindingSlot].Heap->GetGPUDescriptorHandleForHeapStart());
 }
 
 void SampleRender::D3D12Shader::CreateCopyPipeline()
@@ -442,7 +454,8 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	void* gpuData = nullptr;
 	hr = textureBuffer->Map(0, &readRange, &gpuData);
 	assert(hr == S_OK);
-	memcpy(gpuData, textureElement.GetTextureBuffer(), uploadBufferDesc.Width);
+	size_t textureSize = (textureElement.GetWidth() * textureElement.GetHeight() * textureElement.GetDepth() * textureElement.GetChannels());
+	memcpy(gpuData, textureElement.GetTextureBuffer(), textureSize);
 	textureBuffer->Unmap(0, NULL);
 
 	D3D12_TEXTURE_COPY_LOCATION destLocation = {};
@@ -526,8 +539,6 @@ void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
 	//cmdList->SetDescriptorHeaps(1, m_CBuffers[bindingSlot].Heap.GetAddressOf());
 	//cmdList->SetGraphicsRootDescriptorTable(bindingSlot, m_CBuffers[bindingSlot].Heap->GetGPUDescriptorHandleForHeapStart());
 	cmdList->SetGraphicsRootConstantBufferView(bindingSlot, m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress());
-	cmdList->SetDescriptorHeaps(1, m_Textures[0].Heap.GetAddressOf());
-	cmdList->SetGraphicsRootDescriptorTable(2, m_Textures[0].Heap->GetGPUDescriptorHandleForHeapStart());
 }
 
 bool SampleRender::D3D12Shader::IsSmallBufferValid(size_t size)

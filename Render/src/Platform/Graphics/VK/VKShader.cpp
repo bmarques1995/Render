@@ -220,6 +220,10 @@ void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_
     BindUniform(bindingSlot);
 }
 
+void SampleRender::VKShader::BindTexture(uint32_t bindingSlot)
+{
+}
+
 bool SampleRender::VKShader::IsUniformValid(size_t size)
 {
     return ((size % (*m_Context)->GetUniformAttachment()) == 0);
