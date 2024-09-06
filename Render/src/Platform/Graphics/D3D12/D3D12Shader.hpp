@@ -17,7 +17,7 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND D3D12Shader : public Shader
 	{
 	public:
-		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout);
+		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout);
 		~D3D12Shader();
 
 		void Stage() override;
@@ -42,7 +42,10 @@ namespace SampleRender
 		bool IsSmallBufferValid(size_t size);
 		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
-		void AllocateTexture();
+		void AllocateTexture(TextureElement textureElement);
+		void CreateTextureAndHeap(TextureElement textureElement);
+		void CopyTextureBuffer(TextureElement textureElement);
+
 		void AllocateSampler();
 
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
@@ -53,14 +56,18 @@ namespace SampleRender
 		static D3D12_RESOURCE_DIMENSION GetNativeDimension(BufferType type);
 		static const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> s_ShaderPusher;
 		static const std::list<std::string> s_GraphicsPipelineStages;
+		static D3D12_RESOURCE_DIMENSION GetNativeTensor(TextureTensor tensor);
 
 		std::unordered_map<uint32_t, ResourceAndHeap> m_CBuffers;
+		std::unordered_map<uint32_t, ResourceAndHeap> m_Textures;
 
 		Json::Value m_PipelineInfo;
 
 		InputBufferLayout m_Layout;
 		SmallBufferLayout m_SmallBufferLayout;
 		UniformLayout m_UniformLayout;
+		TextureLayout m_TextureLayout;
+		SamplerLayout m_SamplerLayout;
 		const std::shared_ptr<D3D12Context>* m_Context;
 		std::string m_ShaderDir;
 		ComPointer<IDxcBlob> m_RootBlob;

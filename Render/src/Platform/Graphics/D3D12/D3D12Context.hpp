@@ -37,6 +37,12 @@ namespace SampleRender
 
 		ID3D12Device10* GetDevicePtr() const;
 		ID3D12GraphicsCommandList6* GetCurrentCommandList() const;
+		ID3D12CommandAllocator* GetCurrentCommandAllocator() const;
+		ID3D12GraphicsCommandList6* GetBufferCommandList() const;
+		ID3D12CommandAllocator* GetBufferCommandAllocator() const;
+		ID3D12CommandQueue* GetCommandQueue() const;
+		ID3D12Fence* GetCommandQueueFence() const;
+		HANDLE GetCommandQueueFenceEvent() const;
 
 		const std::string GetGPUName() override;
 
@@ -91,7 +97,9 @@ namespace SampleRender
 		D3D12_CLEAR_VALUE m_ClearColor;
 
 		ComPointer<ID3D12CommandAllocator>* m_CommandAllocators;
-		ComPointer<ID3D12GraphicsCommandList6> m_CommandList;
+		ComPointer<ID3D12GraphicsCommandList6>* m_CommandLists;
+		ComPointer<ID3D12CommandAllocator> m_BufferCommandAllocator;
+		ComPointer<ID3D12GraphicsCommandList6> m_BufferCommandList;
 
 		UINT m_CurrentBufferIndex = -1;
 	};

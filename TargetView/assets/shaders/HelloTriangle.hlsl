@@ -6,7 +6,20 @@ RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
 RootConstants(num32BitConstants=48, b0), \
 CBV(b1), \
 DescriptorTable(SRV(t0, numDescriptors = 1)), \
-DescriptorTable(Sampler(s0, numDescriptors = 1)) \
+DescriptorTable(Sampler(s0, numDescriptors = 1)), \
+StaticSampler( s2,\
+                filter = FILTER_MIN_MAG_MIP_POINT,\
+                addressU = TEXTURE_ADDRESS_WRAP,\
+                addressV = TEXTURE_ADDRESS_WRAP,\
+                addressW = TEXTURE_ADDRESS_WRAP,\
+                mipLODBias = 0.f,\
+                maxAnisotropy = 16,\
+                comparisonFunc = COMPARISON_LESS_EQUAL,\
+                borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE,\
+                minLOD = 0.f,\
+                maxLOD = 3.402823466e+38f,\
+                space = 0,\
+                visibility = SHADER_VISIBILITY_ALL), \
 //DescriptorTable(CBV(b1))
 
 struct SmallMVP
@@ -42,6 +55,9 @@ cbuffer u_CompleteMVP : register(b1)
 {
     CompleteMVP m_CompleteMVP;
 };
+
+Texture2D textureChecker : register(t0);
+SamplerState staticSampler : register(s2);
 
 struct VSInput
 {
@@ -80,5 +96,6 @@ PSInput vs_main(VSInput vsInput)
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-    return float4(psInput.txc, .0f, 1.0f);
+    return textureChecker.SampleLevel(staticSampler, psInput.txc, 0.0f);
+    //return float4(psInput.txc, .0f, 1.0f);
 }

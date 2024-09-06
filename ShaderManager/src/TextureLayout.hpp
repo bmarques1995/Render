@@ -24,6 +24,7 @@ namespace SampleRender
 		uint32_t GetHeight() const;
 		uint32_t GetDepth() const;
 		uint32_t GetMipsLevel() const;
+		uint32_t GetChannels() const;
 		TextureTensor GetTensor() const;
 		uint32_t GetBindingSlot() const;
 	private:

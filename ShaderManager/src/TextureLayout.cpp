@@ -41,6 +41,11 @@ uint32_t SampleRender::TextureElement::GetMipsLevel() const
 	return m_Image->GetMips();
 }
 
+uint32_t SampleRender::TextureElement::GetChannels() const
+{
+	return m_Image->GetChannels();
+}
+
 SampleRender::TextureTensor SampleRender::TextureElement::GetTensor() const
 {
 	return m_Tensor;

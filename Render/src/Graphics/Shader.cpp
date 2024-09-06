@@ -14,7 +14,7 @@ SampleRender::SizeMismatchException::SizeMismatchException(size_t layoutSize, si
 	m_Reason = buffer.str();
 }
 
-SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout)
+SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout)
 {
 	GraphicsAPI api = Application::GetInstance()->GetCurrentAPI();
 	std::stringstream controller_path;
@@ -26,7 +26,7 @@ SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<Gr
 	{
 		controller_path << ".d3d12.json";
 		std::string json_controller_path = controller_path.str();
-		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout);
+		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout, textureLayout, samplerLayout);
 	}
 #endif
 	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_VK:

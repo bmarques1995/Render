@@ -21,8 +21,8 @@ const std::list<std::string> SampleRender::D3D12Shader::s_GraphicsPipelineStages
 	"ps"
 };
 
-SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout) :
-	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout)
+SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout) :
+	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout), m_TextureLayout(textureLayout), m_SamplerLayout(samplerLayout)
 {
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
@@ -66,6 +66,13 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 		unsigned char* data = new unsigned char[element.second.GetSize()];
 		PreallocateCBuffer(data, element.second);
 		delete[] data;
+	}
+
+	auto textures = m_TextureLayout.GetElements();
+
+	for (auto& element : textures)
+	{
+		AllocateTexture(element.second);
 	}
 
 	for (auto it = s_GraphicsPipelineStages.begin(); it != s_GraphicsPipelineStages.end(); it++)
@@ -276,29 +283,47 @@ void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t s
 	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/ smallStride, data, offset/smallStride);
 }
 
-void SampleRender::D3D12Shader::AllocateTexture()
+void SampleRender::D3D12Shader::AllocateTexture(TextureElement textureElement)
+{
+	CreateTextureAndHeap(textureElement);
+	CopyTextureBuffer(textureElement);
+
+	/*D3D12_RANGE readRange = { 0 };
+	void* gpuData = nullptr;
+	hr = texture->Map(0, &readRange, &gpuData);
+	assert(hr == S_OK);
+	memcpy(gpuData, nullptr, 0);
+	texture->Unmap(0, NULL);*/
+}
+
+void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureElement)
 {
 	auto device = (*m_Context)->GetDevicePtr();
 	HRESULT hr;
 
-	ComPointer<ID3D12Resource2> texture;
-	ComPointer<ID3D12DescriptorHeap> textureHeap;
+	D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc{};
+	srvDescriptorHeapDesc.Type = GetNativeHeapType(BufferType::TEXTURE_BUFFER);
+	srvDescriptorHeapDesc.NumDescriptors = 1;
+	srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvDescriptorHeapDesc.NodeMask = 0;
 
-	auto texture_width = 1u;
-	D3D12_RESOURCE_DESC1 constantBufferDesc = {};
-	constantBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-	constantBufferDesc.Width = texture_width; //mandatory
-	constantBufferDesc.Height = 1; // mandatory 2 and 3
-	constantBufferDesc.DepthOrArraySize = 1; // mandatory 3
-	constantBufferDesc.MipLevels = 1; // param
-	constantBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	constantBufferDesc.SampleDesc.Count = 1;
-	constantBufferDesc.SampleDesc.Quality = 0;
-	constantBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-	constantBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+	hr = device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Heap.GetAddressOf()));
+	assert(hr == S_OK);
+
+	D3D12_RESOURCE_DESC1 textureBufferDesc = {};
+	textureBufferDesc.Dimension = GetNativeTensor(textureElement.GetTensor());
+	textureBufferDesc.Width = textureElement.GetWidth(); //mandatory
+	textureBufferDesc.Height = textureElement.GetHeight(); // mandatory 2 and 3
+	textureBufferDesc.DepthOrArraySize = textureElement.GetDepth(); // mandatory 3
+	textureBufferDesc.MipLevels = textureElement.GetMipsLevel(); // param
+	textureBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureBufferDesc.SampleDesc.Count = 1;
+	textureBufferDesc.SampleDesc.Quality = 0;
+	textureBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
 	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
 	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
 	heapProps.CreationNodeMask = 1;
@@ -307,26 +332,149 @@ void SampleRender::D3D12Shader::AllocateTexture()
 	hr = device->CreateCommittedResource2(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
-		&constantBufferDesc,
+		&textureBufferDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		nullptr,
-		IID_PPV_ARGS(texture.GetAddressOf()));
+		IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Resource.GetAddressOf()));
 
 	assert(hr == S_OK);
 
-	auto cbvHeapStartHandle = textureHeap->GetCPUDescriptorHandleForHeapStart();
+	auto srvHeapStartHandle = m_Textures[textureElement.GetBindingSlot()].Heap->GetCPUDescriptorHandleForHeapStart();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 
-	device->CreateShaderResourceView(texture, &srvDesc, cbvHeapStartHandle);
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureBufferDesc.Format;
+	switch (textureElement.GetTensor())
+	{
+	case SampleRender::TextureTensor::TENSOR_1:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+		srvDesc.Texture1D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture1D.MostDetailedMip = 0;
+		srvDesc.Texture1D.ResourceMinLODClamp = 0;
+		break;
+	case SampleRender::TextureTensor::TENSOR_2:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		break;
+	case SampleRender::TextureTensor::TENSOR_3:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		srvDesc.Texture3D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture3D.MostDetailedMip = 0;
+		srvDesc.Texture3D.ResourceMinLODClamp = 0;
+		break;
+	}
+	
+	device->CreateShaderResourceView(m_Textures[textureElement.GetBindingSlot()].Resource, &srvDesc, srvHeapStartHandle);
+}
+
+void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
+{
+	HRESULT hr;
+	auto device = (*m_Context)->GetDevicePtr();
+	auto cmdList = (*m_Context)->GetBufferCommandList();
+	auto cmdQueue = (*m_Context)->GetCommandQueue();
+	ComPointer<ID3D12Resource2> textureBuffer;
+
+	D3D12_RESOURCE_DESC uploadBufferDesc = {};
+	uploadBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	uploadBufferDesc.Width = (textureElement.GetWidth() * textureElement.GetHeight() * textureElement.GetDepth() * textureElement.GetChannels());
+	uploadBufferDesc.Height = 1;
+	uploadBufferDesc.DepthOrArraySize = 1;
+	uploadBufferDesc.MipLevels = 1;
+	uploadBufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uploadBufferDesc.SampleDesc.Count = 1;
+	uploadBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	D3D12_HEAP_PROPERTIES uploadHeapProperties = {};
+	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	hr = device->CreateCommittedResource1(
+		&uploadHeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&uploadBufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,  // Upload heap is CPU-accessible
+		nullptr,
+		nullptr,
+		IID_PPV_ARGS(textureBuffer.GetAddressOf())
+	);
+
+	assert(hr == S_OK);
 
 	D3D12_RANGE readRange = { 0 };
 	void* gpuData = nullptr;
-	hr = texture->Map(0, &readRange, &gpuData);
+	hr = textureBuffer->Map(0, &readRange, &gpuData);
 	assert(hr == S_OK);
-	memcpy(gpuData, nullptr, 0);
-	texture->Unmap(0, NULL);
+	memcpy(gpuData, textureElement.GetTextureBuffer(), uploadBufferDesc.Width);
+	textureBuffer->Unmap(0, NULL);
+
+	D3D12_TEXTURE_COPY_LOCATION destLocation = {};
+	destLocation.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	destLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	destLocation.SubresourceIndex = 0;
+
+	D3D12_RESOURCE_DESC1 textureDesc = {};
+	textureDesc.Dimension = GetNativeTensor(textureElement.GetTensor());
+	textureDesc.Width = textureElement.GetWidth(); //mandatory
+	textureDesc.Height = textureElement.GetHeight(); // mandatory 2 and 3
+	textureDesc.DepthOrArraySize = textureElement.GetDepth(); // mandatory 3
+	textureDesc.MipLevels = textureElement.GetMipsLevel(); // param
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+	srcLocation.pResource = textureBuffer.Get();
+	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	//3rd arg represents the number of subresources
+	device->GetCopyableFootprints1(&textureDesc, 0, 1, 0, &srcLocation.PlacedFootprint, nullptr, nullptr, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	cmdList->ResourceBarrier(1, &barrier);
+
+	cmdList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
+
+	// Transition the resource to PIXEL_SHADER_RESOURCE for sampling
+	
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	cmdList->ResourceBarrier(1, &barrier);
+
+	cmdList->Close();
+
+	ID3D12CommandList* lists[] = { cmdList };
+	cmdQueue->ExecuteCommandLists(1, lists);
+
+	ID3D12Fence* fence = (*m_Context)->GetCommandQueueFence();
+	HANDLE event = (*m_Context)->GetCommandQueueFenceEvent();
+
+	cmdQueue->Signal(fence, 1);
+	auto test = fence->GetCompletedValue();
+	if (fence->GetCompletedValue() < 1)
+	{
+		fence->SetEventOnCompletion(1, event);
+		WaitForSingleObject(event, INFINITE);
+	}
+
+	CloseHandle(event);
+
+	auto cmdAllocator = (*m_Context)->GetBufferCommandAllocator();
+	cmdAllocator->Reset();
+	cmdList->Reset(cmdAllocator, nullptr);
 }
 
 void SampleRender::D3D12Shader::AllocateSampler()
@@ -357,6 +505,8 @@ void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
 	//cmdList->SetDescriptorHeaps(1, m_CBuffers[bindingSlot].Heap.GetAddressOf());
 	//cmdList->SetGraphicsRootDescriptorTable(bindingSlot, m_CBuffers[bindingSlot].Heap->GetGPUDescriptorHandleForHeapStart());
 	cmdList->SetGraphicsRootConstantBufferView(bindingSlot, m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress());
+	cmdList->SetDescriptorHeaps(1, m_Textures[0].Heap.GetAddressOf());
+	cmdList->SetGraphicsRootDescriptorTable(2, m_Textures[0].Heap->GetGPUDescriptorHandleForHeapStart());
 }
 
 bool SampleRender::D3D12Shader::IsSmallBufferValid(size_t size)
@@ -435,6 +585,7 @@ D3D12_DESCRIPTOR_HEAP_TYPE SampleRender::D3D12Shader::GetNativeHeapType(BufferTy
 	switch (type)
 	{
 	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+	case SampleRender::BufferType::TEXTURE_BUFFER:
 		return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	default:
 	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
@@ -450,6 +601,21 @@ D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeDimension(BufferTyp
 		return D3D12_RESOURCE_DIMENSION_BUFFER;
 	default:
 	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+		return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+	}
+}
+
+D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeTensor(TextureTensor tensor)
+{
+	switch (tensor)
+	{
+	case SampleRender::TextureTensor::TENSOR_1:
+		return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+	case SampleRender::TextureTensor::TENSOR_2:
+		return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+	case SampleRender::TextureTensor::TENSOR_3:
+		return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+	default:
 		return D3D12_RESOURCE_DIMENSION_UNKNOWN;
 	}
 }

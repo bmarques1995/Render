@@ -81,7 +81,7 @@ SampleRender::Application::Application(std::string programLocation) :
 		}
 	);
 
-	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
+	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout, textureLayout, samplerLayout));
 	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) vBuffer, sizeof(vBuffer), layout.GetStride()));
 	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }

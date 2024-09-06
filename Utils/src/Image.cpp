@@ -37,13 +37,11 @@ uint32_t SampleRender::Image::GetMips() const
 {
 	uint32_t mipLevels = 1;
 
-	uint32_t width = m_Width;
-	uint32_t height = m_Height;
+	uint32_t comparator = std::max(m_Width, m_Height);
 
-	while (width > 1 && height > 1)
+	while (comparator > 1)
 	{
-		width = std::max(width / 2, (uint32_t)1);
-		height = std::max(height / 2, (uint32_t)1);
+		comparator = std::max(comparator / 2, (uint32_t)1);
 		++mipLevels;
 	}
 
