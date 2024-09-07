@@ -12,3 +12,4 @@ DescriptorTable(Sampler(s0, numDescriptors = 1)) \`, the first to be set must be
 
 D3D12 Sampler
 - The root signature will only accept dynamic samplers inside a Descriptor Table
+- The samplers aren't allowed to be bound, only set and reset

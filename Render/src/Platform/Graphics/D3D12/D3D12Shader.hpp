@@ -49,7 +49,7 @@ namespace SampleRender
 		void CreateTextureAndHeap(TextureElement textureElement);
 		void CopyTextureBuffer(TextureElement textureElement);
 
-		void AllocateSampler();
+		void AllocateSampler(SamplerElement samplerElement);
 
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 		void InitJsonAndPaths(std::string json_controller_path);
@@ -61,15 +61,19 @@ namespace SampleRender
 		static const std::list<std::string> s_GraphicsPipelineStages;
 		static D3D12_RESOURCE_DIMENSION GetNativeTensor(TextureTensor tensor);
 
+		static D3D12_FILTER GetNativeFilter(SamplerFilter filter);
+		static D3D12_TEXTURE_ADDRESS_MODE GetNativeAddressMode(AddressMode addressMode);
+
 		std::unordered_map<uint32_t, ResourceAndHeap> m_CBuffers;
 		std::unordered_map<uint32_t, ResourceAndHeap> m_Textures;
+		std::unordered_map<uint32_t, ComPointer<ID3D12DescriptorHeap>> m_Samplers;
 
 		Json::Value m_PipelineInfo;
 
-		ComPointer<ID3D12CommandAllocator> m_BufferCommandAllocator;
-		ComPointer<ID3D12CommandQueue> m_BufferCommandQueue;
-		ComPointer<ID3D12GraphicsCommandList6> m_BufferCommandList;
-		ComPointer<ID3D12Fence> m_BufferFence;
+		ComPointer<ID3D12CommandAllocator> m_CopyCommandAllocator;
+		ComPointer<ID3D12CommandQueue> m_CopyCommandQueue;
+		ComPointer<ID3D12GraphicsCommandList6> m_CopyCommandList;
+		ComPointer<ID3D12Fence> m_CopyFence;
 		uint64_t m_BufferFenceValue = 0;
 		HANDLE m_BufferFenceEvent;
 

@@ -110,6 +110,7 @@ void SampleRender::Application::Run()
 				m_Shader->BindSmallBuffer(&m_SmallMVP.model(0, 0), sizeof(m_SmallMVP), 0);
 				m_Shader->BindUniforms(&m_CompleteMVP.model(0, 0), sizeof(m_CompleteMVP), 1);
 				m_Shader->BindTexture(2);
+				//m_Shader->BindSampler(3);
 				m_VertexBuffer->Stage();
 				m_IndexBuffer->Stage();
 				m_Context->StageViewportAndScissors();

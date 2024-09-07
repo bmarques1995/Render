@@ -21,7 +21,7 @@ one level dir):
 
 To build the repository, just select a preset, at this point, only the presets `x64-debug` and `x64-release`
 are avaliable, and to build, just run `cmake --preset <preset_name>`, that all dependencies will be installed
-and the project will be built.
+and the project will be built. The executable and the DLLs are located at `CMAKE_PREFIX_PATH/bin`
 
 Disclaimer: all the installers will be run at first time by cmake, so, the first build will take a several time,
 and they will be build and install all programs. But, if the dependencies are installed in the prefix_path, the build
@@ -46,4 +46,4 @@ You can use different textures to test this program, but there is 2 rules that w
 - Is only allowed textures with 4 channels
 - The width must be a multiple of 64, what means that (width%64 == 0)
 
-In the future i will allow textures with 1 channel and a width multiple of 256, This is a D3D12 alignment condition
+In the future I will allow textures with 1 channel and a width multiple of 256, This is a D3D12 alignment condition

@@ -60,8 +60,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.SampleDesc.Count = 1;
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	
-	auto elements = m_UniformLayout.GetElements();
-		
+	auto elements = m_UniformLayout.GetElements();	
 	for (auto& element : elements)
 	{
 		unsigned char* data = new unsigned char[element.second.GetSize()];
@@ -70,10 +69,15 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	}
 
 	auto textures = m_TextureLayout.GetElements();
-
 	for (auto& element : textures)
 	{
 		AllocateTexture(element.second);
+	}
+
+	auto samplers = m_SamplerLayout.GetElements();
+	for (auto& element : samplers)
+	{
+		AllocateSampler(element.second);
 	}
 
 	for (auto it = s_GraphicsPipelineStages.begin(); it != s_GraphicsPipelineStages.end(); it++)
@@ -160,24 +164,28 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	queueDesc.NodeMask = 0;
-	device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_BufferCommandQueue.GetAddressOf()));
+	hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_CopyCommandQueue.GetAddressOf()));
+	assert(hr == S_OK);
 
-	device->CreateFence(m_BufferFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_BufferFence.GetAddressOf()));
+	hr = device->CreateFence(m_BufferFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
+	assert(hr == S_OK);
 
 	m_BufferFenceEvent = CreateEventW(nullptr, false, false, nullptr);
 
-	device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_BufferCommandAllocator.GetAddressOf()));
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CopyCommandAllocator.GetAddressOf()));
+	assert(hr == S_OK);
 
-	device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_BufferCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_BufferCommandList.GetAddressOf()));
+	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CopyCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_CopyCommandList.GetAddressOf()));
+	assert(hr == S_OK);
 }
 
 void SampleRender::D3D12Shader::WaitCopyPipeline()
 {
-	m_BufferCommandQueue->Signal(m_BufferFence, 1);
-	auto test = m_BufferFence->GetCompletedValue();
-	if (m_BufferFence->GetCompletedValue() < 1)
+	m_CopyCommandQueue->Signal(m_CopyFence, 1);
+	auto test = m_CopyFence->GetCompletedValue();
+	if (m_CopyFence->GetCompletedValue() < 1)
 	{
-		m_BufferFence->SetEventOnCompletion(1, m_BufferFenceEvent);
+		m_CopyFence->SetEventOnCompletion(1, m_BufferFenceEvent);
 		WaitForSingleObject(m_BufferFenceEvent, INFINITE);
 	}
 
@@ -397,20 +405,20 @@ void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureEleme
 	{
 	case SampleRender::TextureTensor::TENSOR_1:
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
-		srvDesc.Texture1D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture1D.MipLevels = -1;
 		srvDesc.Texture1D.MostDetailedMip = 0;
 		srvDesc.Texture1D.ResourceMinLODClamp = 0;
 		break;
 	case SampleRender::TextureTensor::TENSOR_2:
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-		srvDesc.Texture2D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture2D.MipLevels = -1;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.ResourceMinLODClamp = 0;
 		srvDesc.Texture2D.PlaneSlice = 0;
 		break;
 	case SampleRender::TextureTensor::TENSOR_3:
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
-		srvDesc.Texture3D.MipLevels = textureElement.GetMipsLevel();
+		srvDesc.Texture3D.MipLevels = -1;
 		srvDesc.Texture3D.MostDetailedMip = 0;
 		srvDesc.Texture3D.ResourceMinLODClamp = 0;
 		break;
@@ -487,9 +495,9 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_BufferCommandList->ResourceBarrier(1, &barrier);
+	m_CopyCommandList->ResourceBarrier(1, &barrier);
 
-	m_BufferCommandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
+	m_CopyCommandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
 
 	// Transition the resource to PIXEL_SHADER_RESOURCE for sampling
 	
@@ -498,39 +506,46 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
 	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
 	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-	m_BufferCommandList->ResourceBarrier(1, &barrier);
+	m_CopyCommandList->ResourceBarrier(1, &barrier);
 
-	m_BufferCommandList->Close();
+	m_CopyCommandList->Close();
 
-	ID3D12CommandList* lists[] = { m_BufferCommandList };
-	m_BufferCommandQueue->ExecuteCommandLists(1, lists);
+	ID3D12CommandList* lists[] = { m_CopyCommandList };
+	m_CopyCommandQueue->ExecuteCommandLists(1, lists);
 
 	WaitCopyPipeline();
 
-	m_BufferCommandAllocator->Reset();
-	m_BufferCommandList->Reset(m_BufferCommandAllocator, nullptr);
+	m_CopyCommandAllocator->Reset();
+	m_CopyCommandList->Reset(m_CopyCommandAllocator, nullptr);
 }
 
-void SampleRender::D3D12Shader::AllocateSampler()
+void SampleRender::D3D12Shader::AllocateSampler(SamplerElement samplerElement)
 {
 	auto device = (*m_Context)->GetDevicePtr();
 	HRESULT hr;
 
-	ComPointer<ID3D12DescriptorHeap> samplerHeap;
+	D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc{};
+	srvDescriptorHeapDesc.Type = GetNativeHeapType(BufferType::SAMPLER_BUFFER);
+	srvDescriptorHeapDesc.NumDescriptors = 1;
+	srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvDescriptorHeapDesc.NodeMask = 0;
+
+	hr = device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(m_Samplers[samplerElement.GetBindingSlot()].GetAddressOf()));
+	assert(hr == S_OK);
 
 	D3D12_STATIC_SAMPLER_DESC;
 	D3D12_SAMPLER_DESC samplerDesc = {};
-	samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-	samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-	samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	samplerDesc.Filter = GetNativeFilter(samplerElement.GetFilter());
+	samplerDesc.AddressU = GetNativeAddressMode(samplerElement.GetAddressMode());
+	samplerDesc.AddressV = GetNativeAddressMode(samplerElement.GetAddressMode());
+	samplerDesc.AddressW = GetNativeAddressMode(samplerElement.GetAddressMode());
 	samplerDesc.MipLODBias = 0.0f;
-	samplerDesc.MaxAnisotropy = 1;
-	samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+	samplerDesc.MaxAnisotropy = 1 << (uint32_t)samplerElement.GetAnisotropicFactor();
+	samplerDesc.ComparisonFunc = (D3D12_COMPARISON_FUNC) ((uint32_t)samplerElement.GetComparisonPassMode() + 1);
 	samplerDesc.MinLOD = 0.0f;
 	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
-	device->CreateSampler(&samplerDesc, samplerHeap->GetCPUDescriptorHandleForHeapStart());
+	device->CreateSampler(&samplerDesc, m_Samplers[samplerElement.GetBindingSlot()]->GetCPUDescriptorHandleForHeapStart());
 }
 
 void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
@@ -619,6 +634,8 @@ D3D12_DESCRIPTOR_HEAP_TYPE SampleRender::D3D12Shader::GetNativeHeapType(BufferTy
 	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
 	case SampleRender::BufferType::TEXTURE_BUFFER:
 		return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	case SampleRender::BufferType::SAMPLER_BUFFER:
+		return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
 	default:
 	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
 		return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
@@ -649,5 +666,38 @@ D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeTensor(TextureTenso
 		return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
 	default:
 		return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+	}
+}
+
+D3D12_FILTER SampleRender::D3D12Shader::GetNativeFilter(SamplerFilter filter)
+{
+	switch (filter)
+	{
+	default:
+	case SampleRender::SamplerFilter::LINEAR:
+		return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+	case SampleRender::SamplerFilter::NEAREST:
+		return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+	case SampleRender::SamplerFilter::ANISOTROPIC:
+		return D3D12_FILTER_ANISOTROPIC;
+	}
+}
+
+D3D12_TEXTURE_ADDRESS_MODE SampleRender::D3D12Shader::GetNativeAddressMode(AddressMode addressMode)
+{
+	switch (addressMode)
+	{
+	default:
+	case SampleRender::AddressMode::REPEAT:
+		return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+	case SampleRender::AddressMode::MIRROR:
+		return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+	case SampleRender::AddressMode::CLAMP:
+		return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+	case SampleRender::AddressMode::BORDER:
+		return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	case SampleRender::AddressMode::MIRROR_ONCE:
+		return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
+
 	}
 }
