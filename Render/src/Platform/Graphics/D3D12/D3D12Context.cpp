@@ -28,7 +28,7 @@ SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t fr
 SampleRender::D3D12Context::~D3D12Context()
 {
 	FlushQueue();
-	m_CommandList.Release();
+	delete[] m_CommandLists;
 	delete[] m_CommandAllocators;
 	m_DepthStencilView.Release();
 	delete[] m_RenderTargets;
@@ -74,7 +74,7 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	rtSetupBarrier.Transition.Subresource = 0;
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
+	m_CommandLists[m_CurrentBufferIndex]->ResourceBarrier(1, &rtSetupBarrier);
 
 	D3D12_RENDER_PASS_RENDER_TARGET_DESC renderTargetDesc = {};
 	renderTargetDesc.cpuDescriptor = rtvHandle;
@@ -89,7 +89,7 @@ void SampleRender::D3D12Context::ReceiveCommands()
 	depthStencilDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = 0;
 	depthStencilDesc.DepthEndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
 
-	m_CommandList->BeginRenderPass(1, &renderTargetDesc, &depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
+	m_CommandLists[m_CurrentBufferIndex]->BeginRenderPass(1, &renderTargetDesc, &depthStencilDesc, D3D12_RENDER_PASS_FLAG_NONE);
 }
 
 void SampleRender::D3D12Context::DispatchCommands()
@@ -104,20 +104,20 @@ void SampleRender::D3D12Context::DispatchCommands()
 	rtSetupBarrier.Transition.Subresource = 0;
 	rtSetupBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
 
-	m_CommandList->EndRenderPass();
+	m_CommandLists[m_CurrentBufferIndex]->EndRenderPass();
 
-	m_CommandList->ResourceBarrier(1, &rtSetupBarrier);
+	m_CommandLists[m_CurrentBufferIndex]->ResourceBarrier(1, &rtSetupBarrier);
 
 	// === Execute commands ===
-	auto hr = m_CommandList->Close();
+	auto hr = m_CommandLists[m_CurrentBufferIndex]->Close();
 
-	ID3D12CommandList* lists[] = { m_CommandList.Get() };
+	ID3D12CommandList* lists[] = { m_CommandLists[m_CurrentBufferIndex].Get() };
 	m_CommandQueue->ExecuteCommandLists(1, lists);
 
 	FlushQueue();
 
 	m_CommandAllocators[m_CurrentBufferIndex]->Reset();
-	m_CommandList->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
+	m_CommandLists[m_CurrentBufferIndex]->Reset(m_CommandAllocators[m_CurrentBufferIndex].Get(), nullptr);
 }
 
 void SampleRender::D3D12Context::Present()
@@ -127,14 +127,14 @@ void SampleRender::D3D12Context::Present()
 
 void SampleRender::D3D12Context::StageViewportAndScissors()
 {
-	m_CommandList->RSSetViewports(1, &m_Viewport);
-	m_CommandList->RSSetScissorRects(1, &m_ScissorRect);
+	m_CommandLists[m_CurrentBufferIndex]->RSSetViewports(1, &m_Viewport);
+	m_CommandLists[m_CurrentBufferIndex]->RSSetScissorRects(1, &m_ScissorRect);
 }
 
 void SampleRender::D3D12Context::Draw(uint32_t elements)
 {
-	m_CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_CommandList->DrawIndexedInstanced(elements, 1, 0, 0, 0);
+	m_CommandLists[m_CurrentBufferIndex]->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	m_CommandLists[m_CurrentBufferIndex]->DrawIndexedInstanced(elements, 1, 0, 0, 0);
 }
 
 ID3D12Device10* SampleRender::D3D12Context::GetDevicePtr() const
@@ -144,7 +144,7 @@ ID3D12Device10* SampleRender::D3D12Context::GetDevicePtr() const
 
 ID3D12GraphicsCommandList6* SampleRender::D3D12Context::GetCurrentCommandList() const
 {
-	return m_CommandList.GetConst();
+	return m_CommandLists[m_CurrentBufferIndex].GetConst();
 }
 
 const std::string SampleRender::D3D12Context::GetGPUName()
@@ -288,8 +288,11 @@ void SampleRender::D3D12Context::CreateCommandAllocator()
 
 void SampleRender::D3D12Context::CreateCommandList()
 {
-	
-	m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocators[0].Get(), nullptr, IID_PPV_ARGS(&m_CommandList));
+	m_CommandLists = new ComPointer<ID3D12GraphicsCommandList6>[m_FramesInFlight];
+	for (size_t i = 0; i < m_FramesInFlight; i++)
+	{
+		m_Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CommandAllocators[i].Get(), nullptr, IID_PPV_ARGS(m_CommandLists[i].GetAddressOf()));
+	}
 }
 
 void SampleRender::D3D12Context::CreateViewportAndScissor(uint32_t width, uint32_t height)

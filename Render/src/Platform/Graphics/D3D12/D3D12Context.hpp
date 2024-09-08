@@ -91,7 +91,7 @@ namespace SampleRender
 		D3D12_CLEAR_VALUE m_ClearColor;
 
 		ComPointer<ID3D12CommandAllocator>* m_CommandAllocators;
-		ComPointer<ID3D12GraphicsCommandList6> m_CommandList;
+		ComPointer<ID3D12GraphicsCommandList6>* m_CommandLists;
 
 		UINT m_CurrentBufferIndex = -1;
 	};
