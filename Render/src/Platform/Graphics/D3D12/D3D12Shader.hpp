@@ -74,8 +74,8 @@ namespace SampleRender
 		ComPointer<ID3D12CommandQueue> m_CopyCommandQueue;
 		ComPointer<ID3D12GraphicsCommandList6> m_CopyCommandList;
 		ComPointer<ID3D12Fence> m_CopyFence;
-		uint64_t m_BufferFenceValue = 0;
-		HANDLE m_BufferFenceEvent;
+		uint64_t m_CopyFenceValue = 0;
+		HANDLE m_CopyFenceEvent;
 
 		InputBufferLayout m_Layout;
 		SmallBufferLayout m_SmallBufferLayout;

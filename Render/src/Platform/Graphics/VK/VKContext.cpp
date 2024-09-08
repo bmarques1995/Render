@@ -279,6 +279,11 @@ VkCommandBuffer SampleRender::VKContext::GetCurrentCommandBuffer() const
     return m_CommandBuffers[m_CurrentBufferIndex];
 }
 
+VkSurfaceKHR SampleRender::VKContext::GetSurface() const
+{
+    return m_Surface;
+}
+
 void SampleRender::VKContext::CreateInstance()
 {
     VkResult vkr;

@@ -30,16 +30,16 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	InitJsonAndPaths(json_controller_path);
 	CreateCopyPipeline();
 
-	auto nativeElements = m_Layout.GetElements();
-	D3D12_INPUT_ELEMENT_DESC *ied = new D3D12_INPUT_ELEMENT_DESC[nativeElements.size()];
+	auto inputElements = m_Layout.GetElements();
+	D3D12_INPUT_ELEMENT_DESC *ied = new D3D12_INPUT_ELEMENT_DESC[inputElements.size()];
 
-	for (size_t i = 0; i < nativeElements.size(); i++)
+	for (size_t i = 0; i < inputElements.size(); i++)
 	{
-		ied[i].SemanticName = nativeElements[i].GetName().c_str();
+		ied[i].SemanticName = inputElements[i].GetName().c_str();
 		ied[i].SemanticIndex = 0;
-		ied[i].Format = GetNativeFormat(nativeElements[i].GetType());
+		ied[i].Format = GetNativeFormat(inputElements[i].GetType());
 		ied[i].InputSlot = 0;
-		ied[i].AlignedByteOffset = nativeElements[i].GetOffset();
+		ied[i].AlignedByteOffset = inputElements[i].GetOffset();
 		ied[i].InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
 		ied[i].InstanceDataStepRate = 0;
 	}
@@ -49,7 +49,7 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	//https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_pipeline_state_subobject_type
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC graphicsDesc = {};
 	graphicsDesc.NodeMask = 1;
-	graphicsDesc.InputLayout = { ied, (uint32_t)nativeElements.size() };
+	graphicsDesc.InputLayout = { ied, (uint32_t)inputElements.size() };
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	graphicsDesc.pRootSignature = m_RootSignature.Get();
 	graphicsDesc.SampleMask = UINT_MAX;
@@ -60,8 +60,8 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.SampleDesc.Count = 1;
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	
-	auto elements = m_UniformLayout.GetElements();	
-	for (auto& element : elements)
+	auto uniforms = m_UniformLayout.GetElements();	
+	for (auto& element : uniforms)
 	{
 		unsigned char* data = new unsigned char[element.second.GetSize()];
 		PreallocateCBuffer(data, element.second);
@@ -167,10 +167,10 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 	hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_CopyCommandQueue.GetAddressOf()));
 	assert(hr == S_OK);
 
-	hr = device->CreateFence(m_BufferFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
+	hr = device->CreateFence(m_CopyFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
 	assert(hr == S_OK);
 
-	m_BufferFenceEvent = CreateEventW(nullptr, false, false, nullptr);
+	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
 
 	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CopyCommandAllocator.GetAddressOf()));
 	assert(hr == S_OK);
@@ -185,11 +185,11 @@ void SampleRender::D3D12Shader::WaitCopyPipeline()
 	auto test = m_CopyFence->GetCompletedValue();
 	if (m_CopyFence->GetCompletedValue() < 1)
 	{
-		m_CopyFence->SetEventOnCompletion(1, m_BufferFenceEvent);
-		WaitForSingleObject(m_BufferFenceEvent, INFINITE);
+		m_CopyFence->SetEventOnCompletion(1, m_CopyFenceEvent);
+		WaitForSingleObject(m_CopyFenceEvent, INFINITE);
 	}
 
-	CloseHandle(m_BufferFenceEvent);
+	CloseHandle(m_CopyFenceEvent);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -399,6 +399,7 @@ void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureEleme
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
 
+	//This can define the mips levels
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 	srvDesc.Format = textureBufferDesc.Format;
 	switch (textureElement.GetTensor())

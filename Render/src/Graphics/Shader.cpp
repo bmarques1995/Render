@@ -33,7 +33,7 @@ SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<Gr
 	{
 		controller_path << ".vk.json";
 		std::string json_controller_path = controller_path.str();
-		return new VKShader((const std::shared_ptr<VKContext>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout);
+		return new VKShader((const std::shared_ptr<VKContext>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout, textureLayout, samplerLayout);
 	}
 	default:
 		break;
