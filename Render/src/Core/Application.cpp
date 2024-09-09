@@ -50,7 +50,8 @@ SampleRender::Application::Application(std::string programLocation) :
 	InputBufferLayout layout(
 	{
 		{ShaderDataType::Float3, "POSITION", false},
-		{ShaderDataType::Float4, "COLOR", false}
+		{ShaderDataType::Float4, "COLOR", false},
+		{ShaderDataType::Float2, "TEXCOORD", false},
 	});
 
 	SmallBufferLayout smallBufferLayout(
@@ -64,7 +65,7 @@ SampleRender::Application::Application(std::string programLocation) :
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
 	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
-	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*) &vBuffer[0], sizeof(vBuffer), layout.GetStride()));
+	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*)vBuffer[0].data(), sizeof(vBuffer), layout.GetStride()));
 	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }
 

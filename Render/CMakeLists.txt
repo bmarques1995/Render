@@ -49,7 +49,6 @@ target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRE
 target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Window>)
 target_include_directories(${TARGET_NAME} PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Graphics>)
 if(WIN32)
-target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Window/Win32>)
 target_include_directories(${TARGET_NAME} PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/Platform/Graphics/D3D12>)
 target_compile_definitions(${TARGET_NAME} PRIVATE VK_PROTOTYPES VK_USE_PLATFORM_WIN32_KHR)
 endif()
