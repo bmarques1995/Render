@@ -362,6 +362,19 @@ void SampleRender::VKContext::SelectAdapter()
     vkr = vkEnumeratePhysicalDevices(m_Instance, &deviceCount, devices.data());
     assert(vkr == VK_SUCCESS);
 
+#if 0
+    
+    std::vector<VkPhysicalDeviceProperties> GPUProperties;
+
+    for (const auto& device : devices)
+    {
+        VkPhysicalDeviceProperties adapterProperties;
+        vkGetPhysicalDeviceProperties(device, &adapterProperties);
+        GPUProperties.push_back(adapterProperties);
+    }
+
+#endif
+
     for (const auto& device : devices) {
         if (IsDeviceSuitable(device)) {
             m_Adapter = device;

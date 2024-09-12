@@ -182,6 +182,26 @@ void SampleRender::D3D12Context::CreateFactory()
 void SampleRender::D3D12Context::CreateAdapter()
 {
 	HRESULT hr = S_OK;
+
+#if 0
+
+	std::vector<std::pair<ComPointer<IDXGIAdapter4>, DXGI_ADAPTER_DESC3>> adapters;
+
+	for (UINT adapterIndex = 0;; ++adapterIndex) {
+		ComPointer<IDXGIAdapter4> adapter;
+		if (m_DXGIFactory->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(adapter.GetAddressOf())) == DXGI_ERROR_NOT_FOUND) {
+			break; // No more adapters to enumerate.
+		}
+
+		DXGI_ADAPTER_DESC3 desc;
+		adapter->GetDesc3(&desc);
+		adapters.push_back(std::make_pair(adapter, desc));
+	}
+
+	auto adapterType = adapters[0].second;
+
+#endif
+
 	for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != m_DXGIFactory->EnumAdapterByGpuPreference(adapterIndex, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(m_DXGIAdapter.GetAddressOf())); ++adapterIndex)
 	{
 		DXGI_ADAPTER_DESC3 desc;

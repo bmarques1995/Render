@@ -73,10 +73,11 @@ SampleRender::UniformElement::UniformElement()
 	m_BufferType = BufferType::INVALID_BUFFER_TYPE;
 	m_Size = 0;
 	m_BindingSlot = 0xffff;
+	m_ShaderRegister = 0;
 }
 
-SampleRender::UniformElement::UniformElement(BufferType bufferType, size_t size, uint32_t bindingSlot, uint32_t bufferAttachment) :
-	m_BufferType(bufferType), m_Size(size), m_BindingSlot(bindingSlot)
+SampleRender::UniformElement::UniformElement(BufferType bufferType, size_t size, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t bufferAttachment) :
+	m_BufferType(bufferType), m_Size(size), m_BindingSlot(bindingSlot), m_ShaderRegister(shaderRegister)
 {
 	if (!IsSizeValid(bufferAttachment))
 		throw AttachmentMismatchException(size, bufferAttachment);

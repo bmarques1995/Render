@@ -61,7 +61,7 @@ SampleRender::Application::Application(std::string programLocation) :
 
 	UniformLayout uniformLayout(
 	{
-		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, m_Context->GetUniformAttachment() }
+		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, 1, m_Context->GetUniformAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
 	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
