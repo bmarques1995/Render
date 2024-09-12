@@ -212,12 +212,12 @@ void SampleRender::VKShader::BindSmallBuffer(const void* data, size_t size, uint
     );
 }
 
-void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot)
+void SampleRender::VKShader::BindUniforms(const void* data, size_t size, uint32_t shaderRegister)
 {
-    if (m_Uniforms.find(bindingSlot) == m_Uniforms.end())
+    if (m_Uniforms.find(shaderRegister) == m_Uniforms.end())
         return;
-    MapUniform(data, size, bindingSlot);
-    BindUniform(bindingSlot);
+    MapUniform(data, size, shaderRegister);
+    BindUniform(shaderRegister);
 }
 
 bool SampleRender::VKShader::IsUniformValid(size_t size)
@@ -356,11 +356,11 @@ void SampleRender::VKShader::CreateDescriptorSet(UniformElement uniformElement)
     allocInfo.descriptorSetCount = 1;
     allocInfo.pSetLayouts = &m_RootSignature;
 
-    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTables[uniformElement.GetBindingSlot()].Descriptor);
+    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTables[uniformElement.GetShaderRegister()].Descriptor);
     assert(vkr == VK_SUCCESS);
 
     VkDescriptorBufferInfo bufferInfo{};
-    bufferInfo.buffer = m_Uniforms[uniformElement.GetBindingSlot()].Resource;
+    bufferInfo.buffer = m_Uniforms[uniformElement.GetShaderRegister()].Resource;
     bufferInfo.offset = 0;
     bufferInfo.range = uniformElement.GetSize();
 

@@ -25,7 +25,7 @@ namespace SampleRender
 		uint32_t GetOffset() const override;
 
 		void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot) override;
-		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot) override;
+		void BindUniforms(const void* data, size_t size, uint32_t shaderRegister) override;
 
 	private:
 
@@ -36,8 +36,8 @@ namespace SampleRender
 
 		bool IsCBufferValid(size_t size);
 		void PreallocateCBuffer(const void* data, UniformElement uniformElement);
-		void MapCBuffer(const void* data, size_t size, uint32_t bindingSlot);
-		void BindCBuffer(uint32_t bindingSlot);
+		void MapCBuffer(const void* data, size_t size, uint32_t shaderRegister);
+		void BindCBuffer(uint32_t shaderRegister);
 
 		bool IsSmallBufferValid(size_t size);
 		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);

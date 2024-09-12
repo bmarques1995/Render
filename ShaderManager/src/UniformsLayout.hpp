@@ -72,6 +72,7 @@ namespace SampleRender
 		BufferType GetBufferType() const;
 		size_t GetSize() const;
 		uint32_t GetBindingSlot() const;
+		uint32_t GetShaderRegister() const;
 
 		bool IsSizeValid(uint32_t bufferAttachment);
 
@@ -89,7 +90,7 @@ namespace SampleRender
 	public:
 		UniformLayout(std::initializer_list<UniformElement> m_Elements, uint32_t allowedStages);
 
-		const UniformElement& GetElement(uint32_t bindingSlot);
+		const UniformElement& GetElement(uint32_t shaderRegister);
 		const std::unordered_map<uint32_t, UniformElement>& GetElements();
 		uint32_t GetStages() const;
 	private:

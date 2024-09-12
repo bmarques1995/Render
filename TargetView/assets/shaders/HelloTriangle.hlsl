@@ -1,10 +1,24 @@
 #pragma pack_matrix(column_major)
 
-
 #define rs_controller \
 RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
-RootConstants(num32BitConstants=48, b0, space=0), \
-CBV(b1)
+RootConstants(num32BitConstants=48, b0), \
+CBV(b1), \
+DescriptorTable(SRV(t0, numDescriptors = 1)), \
+DescriptorTable(Sampler(s0, numDescriptors = 1)), \
+//StaticSampler( s2,\
+//                filter = FILTER_ANISOTROPIC,\
+//                addressU = TEXTURE_ADDRESS_WRAP,\
+//                addressV = TEXTURE_ADDRESS_WRAP,\
+//                addressW = TEXTURE_ADDRESS_WRAP,\
+//                mipLODBias = 0.f,\
+//                maxAnisotropy = 16,\
+//                comparisonFunc = COMPARISON_LESS_EQUAL,\
+//                borderColor = STATIC_BORDER_COLOR_OPAQUE_WHITE,\
+//                minLOD = 0.f,\
+//                maxLOD = 3.402823466e+38f,\
+//                space = 0,\
+//                visibility = SHADER_VISIBILITY_ALL), \
 //DescriptorTable(CBV(b1))
 
 struct SmallMVP
@@ -41,6 +55,10 @@ cbuffer u_CompleteMVP : register(b1)
     CompleteMVP m_CompleteMVP;
 };
 
+Texture2D textureChecker : register(t0);
+SamplerState dynamicSampler : register(s0);
+SamplerState staticSampler : register(s2);
+
 struct VSInput
 {
     [[vk::location(0)]]float3 pos : POSITION;
@@ -50,15 +68,15 @@ struct VSInput
 
 struct PSInput
 {
-	float4 pos : SV_POSITION;
-	float4 col : COLOR;
+    float4 pos : SV_POSITION;
+    float4 col : COLOR;
     float2 txc : TEXCOORD;
 };
 
 PSInput vs_main(VSInput vsInput)
 {
     bool useComplete = true;
-	PSInput vsoutput;
+    PSInput vsoutput;
     if (useComplete)
     {
         vsoutput.pos = mul(float4(vsInput.pos, 1.0f), m_CompleteMVP.M);
@@ -73,10 +91,11 @@ PSInput vs_main(VSInput vsInput)
     }
     vsoutput.col = vsInput.col;
     vsoutput.txc = vsInput.txc;
-	return vsoutput;
+    return vsoutput;
 }
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-    return float4(psInput.txc, 0.0f, 1.0f);
+    //float4 pixel = textureChecker.SampleLevel(dynamicSampler, psInput.txc, 0.0f);
+    return float4(psInput.col.xyzw);
 }

@@ -98,6 +98,11 @@ uint32_t SampleRender::UniformElement::GetBindingSlot() const
 	return m_BindingSlot;
 }
 
+uint32_t SampleRender::UniformElement::GetShaderRegister() const
+{
+	return m_ShaderRegister;
+}
+
 bool SampleRender::UniformElement::IsSizeValid(uint32_t bufferAttachment)
 {
 	return ((m_Size % bufferAttachment) == 0);
@@ -108,13 +113,13 @@ SampleRender::UniformLayout::UniformLayout(std::initializer_list<UniformElement>
 {
 	for (auto& element : m_Elements)
 	{
-		m_Buffers[element.GetBindingSlot()] = element;
+		m_Buffers[element.GetShaderRegister()] = element;
 	}
 }
 
-const SampleRender::UniformElement& SampleRender::UniformLayout::GetElement(uint32_t bindingSlot)
+const SampleRender::UniformElement& SampleRender::UniformLayout::GetElement(uint32_t shaderRegister)
 {
-	return m_Buffers[bindingSlot];
+	return m_Buffers[shaderRegister];
 }
 
 const std::unordered_map<uint32_t, SampleRender::UniformElement>& SampleRender::UniformLayout::GetElements()

@@ -31,14 +31,14 @@ namespace SampleRender
 		uint32_t GetOffset() const override;
 
 		void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot) override;
-		void BindUniforms(const void* data, size_t size, uint32_t bindingSlot) override;
+		void BindUniforms(const void* data, size_t size, uint32_t shaderRegister) override;
 
 	private:
 
 		bool IsUniformValid(size_t size);
 		void PreallocateUniform(const void* data, UniformElement uniformElement);
-		void MapUniform(const void* data, size_t size, uint32_t bindingSlot);
-		void BindUniform(uint32_t bindingSlot);
+		void MapUniform(const void* data, size_t size, uint32_t shaderRegister);
+		void BindUniform(uint32_t shaderRegister);
 		void CreateDescriptorSet(UniformElement uniformElement);
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 

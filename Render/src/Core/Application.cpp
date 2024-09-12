@@ -7,6 +7,8 @@
 #include "Application.hpp"
 #include "Console.hpp"
 #include "CompilerExceptions.hpp"
+#include <TextureLayout.hpp>
+#include <SamplerLayout.hpp>
 
 SampleRender::Application* SampleRender::Application::s_AppSingleton = nullptr;
 bool SampleRender::Application::s_SingletonEnabled = false;
@@ -63,6 +65,19 @@ SampleRender::Application::Application(std::string programLocation) :
 	{
 		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, 1, m_Context->GetUniformAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
+
+	/*std::shared_ptr<Image> img;
+	img.reset(Image::CreateImage("./assets/textures/yor.png"));
+	TextureLayout textureLayout(
+		{
+			{img, 2, 0, 0, TextureTensor::TENSOR_2, 1}
+		}
+	);
+	SamplerLayout samplerLayout(
+		{
+			{SamplerFilter::LINEAR, AnisotropicFactor::FACTOR_4, AddressMode::BORDER, ComparisonPassMode::ALWAYS, 3, 0}
+		}
+	);*/
 
 	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
 	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*)vBuffer[0].data(), sizeof(vBuffer), layout.GetStride()));

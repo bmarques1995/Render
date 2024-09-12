@@ -122,12 +122,12 @@ void SampleRender::D3D12Shader::BindSmallBuffer(const void* data, size_t size, u
 	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size / smallStride, data, m_SmallBufferLayout.GetElement(bindingSlot).GetOffset()/smallStride);
 }
 
-void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint32_t bindingSlot)
+void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint32_t shaderRegister)
 {
-	if (m_CBuffers.find(bindingSlot) == m_CBuffers.end())
+	if (m_CBuffers.find(shaderRegister) == m_CBuffers.end())
 		return;
-	MapCBuffer(data, size, bindingSlot);
-	BindCBuffer(bindingSlot);
+	MapCBuffer(data, size, shaderRegister);
+	BindCBuffer(shaderRegister);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -258,15 +258,15 @@ void SampleRender::D3D12Shader::PreallocateCBuffer(const void* data, UniformElem
 	MapCBuffer(data, uniformElement.GetSize(), uniformElement.GetBindingSlot());
 }
 
-void SampleRender::D3D12Shader::MapCBuffer(const void* data, size_t size, uint32_t bindingSlot)
+void SampleRender::D3D12Shader::MapCBuffer(const void* data, size_t size, uint32_t shaderRegister)
 {
 	HRESULT hr;
 	D3D12_RANGE readRange = { 0 };
 	void* gpuData = nullptr;
-	hr = m_CBuffers[bindingSlot].Resource->Map(0, &readRange, &gpuData);
+	hr = m_CBuffers[shaderRegister].Resource->Map(0, &readRange, &gpuData);
 	assert(hr == S_OK);
 	memcpy(gpuData, data, size);
-	m_CBuffers[bindingSlot].Resource->Unmap(0, NULL);
+	m_CBuffers[shaderRegister].Resource->Unmap(0, NULL);
 }
 
 void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
@@ -276,12 +276,12 @@ void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t s
 	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/ smallStride, data, offset/smallStride);
 }
 
-void SampleRender::D3D12Shader::BindCBuffer(uint32_t bindingSlot)
+void SampleRender::D3D12Shader::BindCBuffer(uint32_t shaderRegister)
 {
 	auto cmdList = (*m_Context)->GetCurrentCommandList();
 	//cmdList->SetDescriptorHeaps(1, m_CBuffers[bindingSlot].Heap.GetAddressOf());
 	//cmdList->SetGraphicsRootDescriptorTable(bindingSlot, m_CBuffers[bindingSlot].Heap->GetGPUDescriptorHandleForHeapStart());
-	cmdList->SetGraphicsRootConstantBufferView(bindingSlot, m_CBuffers[bindingSlot].Resource->GetGPUVirtualAddress());
+	cmdList->SetGraphicsRootConstantBufferView(shaderRegister, m_CBuffers[shaderRegister].Resource->GetGPUVirtualAddress());
 }
 
 bool SampleRender::D3D12Shader::IsSmallBufferValid(size_t size)
