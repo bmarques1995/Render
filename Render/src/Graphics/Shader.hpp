@@ -4,6 +4,8 @@
 #include "InputBufferLayout.hpp"
 #include "GraphicsContext.hpp"
 #include "UniformsLayout.hpp"
+#include "TextureLayout.hpp"
+#include "SamplerLayout.hpp"
 
 namespace SampleRender
 {
@@ -24,7 +26,8 @@ namespace SampleRender
 
 		virtual void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot) = 0;
 		virtual void BindUniforms(const void* data, size_t size, uint32_t shaderRegister) = 0;
+		virtual void BindTexture(uint32_t shaderRegister) = 0;
 
-		static Shader* Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout);
+		static Shader* Instantiate(const std::shared_ptr<GraphicsContext>* context, std::string json_basepath, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout);
 	};
 }

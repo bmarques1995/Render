@@ -28,7 +28,7 @@ namespace SampleRender
 		TextureTensor GetTensor() const;
 		uint32_t GetBindingSlot() const;
 		uint32_t GetShaderRegister() const;
-		uint32_t GetSamplerSlot() const;
+		uint32_t GetSamplerRegister() const;
 	private:
 		TextureTensor m_Tensor;
 		std::shared_ptr<Image> m_Image;

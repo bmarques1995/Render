@@ -26,6 +26,7 @@ namespace SampleRender
 
 		void BindSmallBuffer(const void* data, size_t size, uint32_t bindingSlot) override;
 		void BindUniforms(const void* data, size_t size, uint32_t shaderRegister) override;
+		void BindTexture(uint32_t shaderRegister) override;
 
 	private:
 

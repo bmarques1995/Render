@@ -63,7 +63,7 @@ uint32_t SampleRender::TextureElement::GetShaderRegister() const
 	return m_ShaderRegister;
 }
 
-uint32_t SampleRender::TextureElement::GetSamplerSlot() const
+uint32_t SampleRender::TextureElement::GetSamplerRegister() const
 {
 	return m_SamplerRegister;
 }

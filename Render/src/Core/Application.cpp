@@ -66,20 +66,21 @@ SampleRender::Application::Application(std::string programLocation) :
 		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, 1, m_Context->GetUniformAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
-	/*std::shared_ptr<Image> img;
-	img.reset(Image::CreateImage("./assets/textures/yor.png"));
+	std::shared_ptr<Image> img;
+	img.reset(Image::CreateImage("./assets/textures/david.jpg"));
+	//std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1
 	TextureLayout textureLayout(
 		{
-			{img, 2, 0, 0, TextureTensor::TENSOR_2, 1}
+			{img, 2, 2, 0, TextureTensor::TENSOR_2, 1}
 		}
 	);
 	SamplerLayout samplerLayout(
 		{
 			{SamplerFilter::LINEAR, AnisotropicFactor::FACTOR_4, AddressMode::BORDER, ComparisonPassMode::ALWAYS, 3, 0}
 		}
-	);*/
+	);
 
-	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout));
+	m_Shader.reset(Shader::Instantiate(&m_Context, "./assets/shaders/HelloTriangle", layout, smallBufferLayout, uniformLayout, textureLayout, samplerLayout));
 	m_VertexBuffer.reset(VertexBuffer::Instantiate(&m_Context,(const void*)vBuffer[0].data(), sizeof(vBuffer), layout.GetStride()));
 	m_IndexBuffer.reset(IndexBuffer::Instantiate(&m_Context, (const void*)&iBuffer[0], sizeof(iBuffer) / sizeof(uint32_t)));
 }
@@ -107,6 +108,7 @@ void SampleRender::Application::Run()
 				m_Shader->Stage();
 				m_Shader->BindSmallBuffer(&m_SmallMVP.model(0, 0), sizeof(m_SmallMVP), 0);
 				m_Shader->BindUniforms(&m_CompleteMVP.model(0, 0), sizeof(m_CompleteMVP), 1);
+				m_Shader->BindTexture(2);
 				m_VertexBuffer->Stage();
 				m_IndexBuffer->Stage();
 				m_Context->StageViewportAndScissors();

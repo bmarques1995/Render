@@ -4,8 +4,8 @@
 RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
 RootConstants(num32BitConstants=48, b0), \
 CBV(b1), \
-DescriptorTable(SRV(t0, numDescriptors = 1)), \
-DescriptorTable(Sampler(s0, numDescriptors = 1)), \
+DescriptorTable(SRV(t1, numDescriptors = 1)), \
+DescriptorTable(Sampler(s1, numDescriptors = 1)), \
 //StaticSampler( s2,\
 //                filter = FILTER_ANISOTROPIC,\
 //                addressU = TEXTURE_ADDRESS_WRAP,\
@@ -50,14 +50,13 @@ cbuffer u_SmallMVP : register(b0)
 
 #endif
 
-cbuffer u_CompleteMVP : register(b1)
+[[vk::binding(1, 0)]] cbuffer u_CompleteMVP : register(b1)
 {
     CompleteMVP m_CompleteMVP;
 };
 
-Texture2D textureChecker : register(t0);
-SamplerState dynamicSampler : register(s0);
-SamplerState staticSampler : register(s2);
+[[vk::binding(2, 0)]] Texture2D textureChecker : register(t1);
+[[vk::binding(2, 0)]] SamplerState dynamicSampler : register(s1);
 
 struct VSInput
 {
@@ -75,7 +74,7 @@ struct PSInput
 
 PSInput vs_main(VSInput vsInput)
 {
-    bool useComplete = true;
+    bool useComplete = false;
     PSInput vsoutput;
     if (useComplete)
     {
@@ -96,6 +95,7 @@ PSInput vs_main(VSInput vsInput)
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-    //float4 pixel = textureChecker.SampleLevel(dynamicSampler, psInput.txc, 0.0f);
-    return float4(psInput.col.xyzw);
+    float4 pixel = textureChecker.SampleLevel(dynamicSampler, psInput.txc, 0.0f);
+    //float4 pixel = float4(1.0f);
+    return float4(psInput.col.xyzw * pixel);
 }

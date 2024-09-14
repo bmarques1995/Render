@@ -52,6 +52,8 @@ namespace SampleRender
 		VkDevice GetDevice() const;
 		VkRenderPass GetRenderPass() const;
 		VkCommandBuffer GetCurrentCommandBuffer() const;
+		VkSurfaceKHR GetSurface() const;
+	
 	private:
 		
 		//Master

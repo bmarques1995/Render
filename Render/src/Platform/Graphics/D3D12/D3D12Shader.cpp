@@ -130,6 +130,10 @@ void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint
 	BindCBuffer(shaderRegister);
 }
 
+void SampleRender::D3D12Shader::BindTexture(uint32_t shaderRegister)
+{
+}
+
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
 {
 	HRESULT hr;
