@@ -18,6 +18,10 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake_helpers)
 include(target_destination)
 include(dep_tracer)
 
+if(WIN32)
+	add_compile_options(/utf-8)
+endif()
+
 # Inclua subprojetos.
 add_subdirectory ("Utils")
 add_subdirectory ("ShaderManager")

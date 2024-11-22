@@ -8,7 +8,7 @@ SampleRender::SDL3Window::SDL3Window(uint32_t width, uint32_t height, std::strin
 	int result;
 	m_Resizer = nullptr;
 	result = SDL_Init(SDL_INIT_EVENTS);
-	assert(result == SDL_TRUE);
+	assert(result);
 
 	Uint32 window_flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN;
 	m_Window = SDL_CreateWindow(m_Title.c_str(), width, height, window_flags);
