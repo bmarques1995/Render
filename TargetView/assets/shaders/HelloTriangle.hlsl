@@ -74,7 +74,7 @@ struct PSInput
 
 PSInput vs_main(VSInput vsInput)
 {
-    bool useComplete = false;
+    bool useComplete = true;
     PSInput vsoutput;
     if (useComplete)
     {

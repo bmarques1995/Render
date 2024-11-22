@@ -22,10 +22,10 @@ namespace SampleRender
 		VkImageView View;
 	};
 
-	struct DescriptorTable
+	/*struct DescriptorTable
 	{
 		VkDescriptorSet Descriptor;
-	};
+	};*/
 
 	class SAMPLE_RENDER_DLL_COMMAND VKShader : public Shader
 	{
@@ -91,8 +91,9 @@ namespace SampleRender
 		std::unordered_map<uint32_t, RM> m_Uniforms;
 		std::unordered_map<uint32_t, VkSampler> m_Samplers;
 		std::unordered_map<uint32_t, IMGB> m_Textures;
-		std::unordered_map<uint32_t, DescriptorTable> m_UniformsTable;
-		std::unordered_map<uint32_t, DescriptorTable> m_TexturesTable;
+		VkDescriptorSet m_DescriptorSet;
+		//std::unordered_map<uint32_t, DescriptorTable> m_UniformsTable;
+		//std::unordered_map<uint32_t, DescriptorTable> m_TexturesTable;
 		
 		//VkDescriptorSet m_DescriptorSet;
 

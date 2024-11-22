@@ -255,7 +255,7 @@ void SampleRender::VKShader::BindTexture(uint32_t bindingSlot)
 {
     auto commandBuffer = (*m_Context)->GetCurrentCommandBuffer();
     auto textureElement = m_TextureLayout.GetElement(bindingSlot);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_TexturesTable[textureElement.GetShaderRegister()].Descriptor, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSet, 0, nullptr);
 }
 
 void SampleRender::VKShader::CreateCopyPipeline()
@@ -370,7 +370,7 @@ void SampleRender::VKShader::BindUniform(uint32_t bindingSlot)
 {
     auto commandBuffer = (*m_Context)->GetCurrentCommandBuffer();
     auto uniformElement = m_UniformLayout.GetElement(bindingSlot);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_UniformsTable[uniformElement.GetShaderRegister()].Descriptor, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSet, 0, nullptr);
 }
 
 uint32_t SampleRender::VKShader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -705,13 +705,14 @@ void SampleRender::VKShader::CreateDescriptorSets()
 
     auto textures = m_TextureLayout.GetElements();
     auto uniforms = m_UniformLayout.GetElements();
+    
     size_t i = 0;
+
+    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
+    assert(vkr == VK_SUCCESS);
 
     for (auto& uniformElement : uniforms)
     {
-        vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_UniformsTable[uniformElement.second.GetShaderRegister()].Descriptor);
-        assert(vkr == VK_SUCCESS);
-
         VkDescriptorBufferInfo bufferInfo{};
         bufferInfo.buffer = m_Uniforms[uniformElement.second.GetShaderRegister()].Resource;
         bufferInfo.offset = 0;
@@ -721,7 +722,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = m_UniformsTable[uniformElement.second.GetShaderRegister()].Descriptor;
+        descriptorWrite.dstSet = m_DescriptorSet;
         descriptorWrite.dstBinding = uniformElement.second.GetShaderRegister();
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = GetNativeDescriptorType(uniformElement.second.GetBufferType());
@@ -731,12 +732,11 @@ void SampleRender::VKShader::CreateDescriptorSets()
         descriptorWrites.push_back(descriptorWrite);
         i++;
     }
-    vkUpdateDescriptorSets(device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
-    descriptorWrites.clear();
+    
     i = 0;
     for (auto& textureElement : textures)
     {
-        vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_TexturesTable[textureElement.second.GetShaderRegister()].Descriptor);
+        
         assert(vkr == VK_SUCCESS);
 
         VkDescriptorImageInfo imageInfo{};
@@ -748,7 +748,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = m_TexturesTable[textureElement.second.GetShaderRegister()].Descriptor;
+        descriptorWrite.dstSet = m_DescriptorSet;
         descriptorWrite.dstBinding = textureElement.second.GetShaderRegister();
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = GetNativeDescriptorType(BufferType::TEXTURE_BUFFER);
@@ -761,6 +761,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
     }
 
     vkUpdateDescriptorSets(device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+    descriptorWrites.clear();
 }
 
 void SampleRender::VKShader::BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset)
