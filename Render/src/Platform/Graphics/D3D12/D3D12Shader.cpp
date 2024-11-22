@@ -522,7 +522,6 @@ void SampleRender::D3D12Shader::AllocateSampler(SamplerElement samplerElement)
 	hr = device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(m_Samplers[samplerElement.GetBindingSlot()].GetAddressOf()));
 	assert(hr == S_OK);
 
-	D3D12_STATIC_SAMPLER_DESC;
 	D3D12_SAMPLER_DESC samplerDesc = {};
 	samplerDesc.Filter = GetNativeFilter(samplerElement.GetFilter());
 	samplerDesc.AddressU = GetNativeAddressMode(samplerElement.GetAddressMode());

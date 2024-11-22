@@ -107,7 +107,11 @@ void SampleRender::SPVCompiler::PushArgList(std::string stage)
 	m_ArgList.push_back(L"-E");
 	m_ArgList.push_back(m_CurrentEntrypoint.c_str());
 	if (m_DebugMode)
+	{
 		m_ArgList.push_back(L"-O0");
+		m_ArgList.push_back(L"-fspv-debug=vulkan-with-source");
+		m_ArgList.push_back(L"-fspv-extension=SPV_KHR_non_semantic_info");
+	}
 	else
 		m_ArgList.push_back(L"-O3");
 
