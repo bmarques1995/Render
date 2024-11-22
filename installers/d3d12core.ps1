@@ -4,7 +4,7 @@ param (
 
 if ($moduleDestination -ne "")
 {
-    $url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.614.0"
+    $url = "https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.614.1"
 
     # Extract the middle version number using a regular expression
     if ($url -match "/(\d+)\.(\d+)\.0") {
