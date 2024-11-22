@@ -67,7 +67,7 @@ SampleRender::Application::Application(std::string programLocation) :
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
 	std::shared_ptr<Image> img;
-	img.reset(Image::CreateImage("./assets/textures/david.jpg"));
+	img.reset(Image::CreateImage("./assets/textures/yor.png"));
 	//std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1
 	TextureLayout textureLayout(
 		{
