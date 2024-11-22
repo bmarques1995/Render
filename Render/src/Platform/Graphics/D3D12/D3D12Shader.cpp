@@ -21,13 +21,14 @@ const std::list<std::string> SampleRender::D3D12Shader::s_GraphicsPipelineStages
 	"ps"
 };
 
-SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout) :
-	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout)
+SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout) :
+	m_Context(context), m_Layout(layout), m_SmallBufferLayout(smallBufferLayout), m_UniformLayout(uniformLayout), m_TextureLayout(textureLayout), m_SamplerLayout(samplerLayout)
 {
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
 
 	InitJsonAndPaths(json_controller_path);
+	CreateCopyPipeline();
 
 	auto nativeElements = m_Layout.GetElements();
 	D3D12_INPUT_ELEMENT_DESC *ied = new D3D12_INPUT_ELEMENT_DESC[nativeElements.size()];
@@ -60,12 +61,23 @@ SampleRender::D3D12Shader::D3D12Shader(const std::shared_ptr<D3D12Context>* cont
 	graphicsDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
 	
 	auto elements = m_UniformLayout.GetElements();
-		
 	for (auto& element : elements)
 	{
 		unsigned char* data = new unsigned char[element.second.GetSize()];
 		PreallocateCBuffer(data, element.second);
 		delete[] data;
+	}
+
+	auto textures = m_TextureLayout.GetElements();
+	for (auto& element : textures)
+	{
+		AllocateTexture(element.second);
+	}
+
+	auto samplers = m_SamplerLayout.GetElements();
+	for (auto& element : samplers)
+	{
+		AllocateSampler(element.second);
 	}
 
 	for (auto it = s_GraphicsPipelineStages.begin(); it != s_GraphicsPipelineStages.end(); it++)
@@ -132,6 +144,47 @@ void SampleRender::D3D12Shader::BindUniforms(const void* data, size_t size, uint
 
 void SampleRender::D3D12Shader::BindTexture(uint32_t shaderRegister)
 {
+	auto cmdList = (*m_Context)->GetCurrentCommandList();
+	cmdList->SetDescriptorHeaps(1, m_Textures[shaderRegister].Heap.GetAddressOf());
+	cmdList->SetGraphicsRootDescriptorTable(shaderRegister, m_Textures[shaderRegister].Heap->GetGPUDescriptorHandleForHeapStart());
+}
+
+void SampleRender::D3D12Shader::CreateCopyPipeline()
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	D3D12_COMMAND_QUEUE_DESC queueDesc{};
+	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	queueDesc.NodeMask = 0;
+	hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_CopyCommandQueue.GetAddressOf()));
+	assert(hr == S_OK);
+
+	hr = device->CreateFence(m_CopyFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
+	assert(hr == S_OK);
+
+	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
+
+	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CopyCommandAllocator.GetAddressOf()));
+	assert(hr == S_OK);
+
+	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CopyCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_CopyCommandList.GetAddressOf()));
+	assert(hr == S_OK);
+}
+
+void SampleRender::D3D12Shader::WaitCopyPipeline()
+{
+	m_CopyCommandQueue->Signal(m_CopyFence, 1);
+	auto test = m_CopyFence->GetCompletedValue();
+	if (m_CopyFence->GetCompletedValue() < 1)
+	{
+		m_CopyFence->SetEventOnCompletion(1, m_CopyFenceEvent);
+		WaitForSingleObject(m_CopyFenceEvent, INFINITE);
+	}
+
+	CloseHandle(m_CopyFenceEvent);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -280,6 +333,210 @@ void SampleRender::D3D12Shader::BindSmallBufferIntern(const void* data, size_t s
 	cmdList->SetGraphicsRoot32BitConstants(bindingSlot, size/ smallStride, data, offset/smallStride);
 }
 
+void SampleRender::D3D12Shader::AllocateTexture(TextureElement textureElement)
+{
+	CreateTextureAndHeap(textureElement);
+	CopyTextureBuffer(textureElement);
+}
+
+void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureElement)
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc{};
+	srvDescriptorHeapDesc.Type = GetNativeHeapType(BufferType::TEXTURE_BUFFER);
+	srvDescriptorHeapDesc.NumDescriptors = 1;
+	srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvDescriptorHeapDesc.NodeMask = 0;
+
+	hr = device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Heap.GetAddressOf()));
+	assert(hr == S_OK);
+
+	D3D12_RESOURCE_DESC1 textureBufferDesc = {};
+	textureBufferDesc.Dimension = GetNativeTensor(textureElement.GetTensor());
+	textureBufferDesc.Width = textureElement.GetWidth(); //mandatory
+	textureBufferDesc.Height = textureElement.GetHeight(); // mandatory 2 and 3
+	textureBufferDesc.DepthOrArraySize = textureElement.GetDepth(); // mandatory 3
+	textureBufferDesc.MipLevels = textureElement.GetMipsLevel(); // param
+	textureBufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureBufferDesc.SampleDesc.Count = 1;
+	textureBufferDesc.SampleDesc.Quality = 0;
+	textureBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureBufferDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_HEAP_PROPERTIES heapProps = {};
+	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
+	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+	heapProps.CreationNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;
+
+	hr = device->CreateCommittedResource2(
+		&heapProps,
+		D3D12_HEAP_FLAG_NONE,
+		&textureBufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		nullptr,
+		IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Resource.GetAddressOf()));
+
+	assert(hr == S_OK);
+
+	auto srvHeapStartHandle = m_Textures[textureElement.GetBindingSlot()].Heap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+
+	//This can define the mips levels
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.Format = textureBufferDesc.Format;
+	switch (textureElement.GetTensor())
+	{
+	case SampleRender::TextureTensor::TENSOR_1:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE1D;
+		srvDesc.Texture1D.MipLevels = -1;
+		srvDesc.Texture1D.MostDetailedMip = 0;
+		srvDesc.Texture1D.ResourceMinLODClamp = 0;
+		break;
+	case SampleRender::TextureTensor::TENSOR_2:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Texture2D.MipLevels = -1;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		break;
+	case SampleRender::TextureTensor::TENSOR_3:
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+		srvDesc.Texture3D.MipLevels = -1;
+		srvDesc.Texture3D.MostDetailedMip = 0;
+		srvDesc.Texture3D.ResourceMinLODClamp = 0;
+		break;
+	}
+
+	device->CreateShaderResourceView(m_Textures[textureElement.GetBindingSlot()].Resource, &srvDesc, srvHeapStartHandle);
+}
+
+void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
+{
+	HRESULT hr;
+	auto device = (*m_Context)->GetDevicePtr();
+	ComPointer<ID3D12Resource2> textureBuffer;
+
+	D3D12_RESOURCE_DESC uploadBufferDesc = {};
+	uploadBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	uploadBufferDesc.Width = (textureElement.GetWidth() * textureElement.GetHeight() * textureElement.GetDepth() * textureElement.GetChannels());
+	uploadBufferDesc.Height = 1;
+	uploadBufferDesc.DepthOrArraySize = 1;
+	uploadBufferDesc.MipLevels = 1;
+	uploadBufferDesc.Format = DXGI_FORMAT_UNKNOWN;
+	uploadBufferDesc.SampleDesc.Count = 1;
+	uploadBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	D3D12_HEAP_PROPERTIES uploadHeapProperties = {};
+	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+
+	hr = device->CreateCommittedResource1(
+		&uploadHeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&uploadBufferDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,  // Upload heap is CPU-accessible
+		nullptr,
+		nullptr,
+		IID_PPV_ARGS(textureBuffer.GetAddressOf())
+	);
+
+	assert(hr == S_OK);
+
+	D3D12_RANGE readRange = { 0 };
+	void* gpuData = nullptr;
+	hr = textureBuffer->Map(0, &readRange, &gpuData);
+	assert(hr == S_OK);
+	size_t textureSize = (textureElement.GetWidth() * textureElement.GetHeight() * textureElement.GetDepth() * textureElement.GetChannels());
+	memcpy(gpuData, textureElement.GetTextureBuffer(), textureSize);
+	textureBuffer->Unmap(0, NULL);
+
+	D3D12_TEXTURE_COPY_LOCATION destLocation = {};
+	destLocation.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	destLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+	destLocation.SubresourceIndex = 0;
+
+	D3D12_RESOURCE_DESC1 textureDesc = {};
+	textureDesc.Dimension = GetNativeTensor(textureElement.GetTensor());
+	textureDesc.Width = textureElement.GetWidth(); //mandatory
+	textureDesc.Height = textureElement.GetHeight(); // mandatory 2 and 3
+	textureDesc.DepthOrArraySize = textureElement.GetDepth(); // mandatory 3
+	textureDesc.MipLevels = textureElement.GetMipsLevel(); // param
+	textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	textureDesc.SampleDesc.Count = 1;
+	textureDesc.SampleDesc.Quality = 0;
+	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+	D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
+	srcLocation.pResource = textureBuffer.Get();
+	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+	//3rd arg represents the number of subresources
+	device->GetCopyableFootprints1(&textureDesc, 0, 1, 0, &srcLocation.PlacedFootprint, nullptr, nullptr, nullptr);
+
+	D3D12_RESOURCE_BARRIER barrier = {};
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	m_CopyCommandList->ResourceBarrier(1, &barrier);
+
+	m_CopyCommandList->CopyTextureRegion(&destLocation, 0, 0, 0, &srcLocation, nullptr);
+
+	// Transition the resource to PIXEL_SHADER_RESOURCE for sampling
+
+	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+	barrier.Transition.pResource = m_Textures[textureElement.GetBindingSlot()].Resource;
+	barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+	barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ;
+	barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+	m_CopyCommandList->ResourceBarrier(1, &barrier);
+
+	m_CopyCommandList->Close();
+
+	ID3D12CommandList* lists[] = { m_CopyCommandList };
+	m_CopyCommandQueue->ExecuteCommandLists(1, lists);
+
+	WaitCopyPipeline();
+
+	m_CopyCommandAllocator->Reset();
+	m_CopyCommandList->Reset(m_CopyCommandAllocator, nullptr);
+}
+
+void SampleRender::D3D12Shader::AllocateSampler(SamplerElement samplerElement)
+{
+	auto device = (*m_Context)->GetDevicePtr();
+	HRESULT hr;
+
+	D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc{};
+	srvDescriptorHeapDesc.Type = GetNativeHeapType(BufferType::SAMPLER_BUFFER);
+	srvDescriptorHeapDesc.NumDescriptors = 1;
+	srvDescriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	srvDescriptorHeapDesc.NodeMask = 0;
+
+	hr = device->CreateDescriptorHeap(&srvDescriptorHeapDesc, IID_PPV_ARGS(m_Samplers[samplerElement.GetBindingSlot()].GetAddressOf()));
+	assert(hr == S_OK);
+
+	D3D12_STATIC_SAMPLER_DESC;
+	D3D12_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = GetNativeFilter(samplerElement.GetFilter());
+	samplerDesc.AddressU = GetNativeAddressMode(samplerElement.GetAddressMode());
+	samplerDesc.AddressV = GetNativeAddressMode(samplerElement.GetAddressMode());
+	samplerDesc.AddressW = GetNativeAddressMode(samplerElement.GetAddressMode());
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1 << (uint32_t)samplerElement.GetAnisotropicFactor();
+	samplerDesc.ComparisonFunc = (D3D12_COMPARISON_FUNC)((uint32_t)samplerElement.GetComparisonPassMode() + 1);
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+
+	device->CreateSampler(&samplerDesc, m_Samplers[samplerElement.GetBindingSlot()]->GetCPUDescriptorHandleForHeapStart());
+}
+
 void SampleRender::D3D12Shader::BindCBuffer(uint32_t shaderRegister)
 {
 	auto cmdList = (*m_Context)->GetCurrentCommandList();
@@ -346,28 +603,40 @@ DXGI_FORMAT SampleRender::D3D12Shader::GetNativeFormat(ShaderDataType type)
 {
 	switch (type)
 	{
-	case ShaderDataType::Float: return DXGI_FORMAT_R32_FLOAT;
-	case ShaderDataType::Float2: return DXGI_FORMAT_R32G32_FLOAT;
-	case ShaderDataType::Float3: return DXGI_FORMAT_R32G32B32_FLOAT;
-	case ShaderDataType::Float4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
-	case ShaderDataType::Uint: return DXGI_FORMAT_R32_UINT;
-	case ShaderDataType::Uint2: return DXGI_FORMAT_R32G32_UINT;
-	case ShaderDataType::Uint3: return DXGI_FORMAT_R32G32B32_UINT;
-	case ShaderDataType::Uint4: return DXGI_FORMAT_R32G32B32A32_UINT;
-	case ShaderDataType::Bool: return DXGI_FORMAT_R8_UINT;
-	default: return DXGI_FORMAT_UNKNOWN;
+		case ShaderDataType::Float: return DXGI_FORMAT_R32_FLOAT;
+		case ShaderDataType::Float2: return DXGI_FORMAT_R32G32_FLOAT;
+		case ShaderDataType::Float3: return DXGI_FORMAT_R32G32B32_FLOAT;
+		case ShaderDataType::Float4: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+		case ShaderDataType::Uint: return DXGI_FORMAT_R32_UINT;
+		case ShaderDataType::Uint2: return DXGI_FORMAT_R32G32_UINT;
+		case ShaderDataType::Uint3: return DXGI_FORMAT_R32G32B32_UINT;
+		case ShaderDataType::Uint4: return DXGI_FORMAT_R32G32B32A32_UINT;
+		case ShaderDataType::Bool: return DXGI_FORMAT_R8_UINT;
+		default: return DXGI_FORMAT_UNKNOWN;
 	}
 }
 
 D3D12_DESCRIPTOR_HEAP_TYPE SampleRender::D3D12Shader::GetNativeHeapType(BufferType type)
 {
+	//switch (type)
+	//{
+	//	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+	//		return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	//	default:
+	//	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+	//		return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+	//}
+
 	switch (type)
 	{
-	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
-		return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-	default:
-	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
-		return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
+		case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+		case SampleRender::BufferType::TEXTURE_BUFFER:
+			return D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		case SampleRender::BufferType::SAMPLER_BUFFER:
+			return D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+		default:
+		case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+			return D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES;
 	}
 }
 
@@ -375,10 +644,57 @@ D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeDimension(BufferTyp
 {
 	switch (type)
 	{
-	case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
-		return D3D12_RESOURCE_DIMENSION_BUFFER;
-	default:
-	case SampleRender::BufferType::INVALID_BUFFER_TYPE:
-		return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+		case SampleRender::BufferType::UNIFORM_CONSTANT_BUFFER:
+			return D3D12_RESOURCE_DIMENSION_BUFFER;
+		default:
+		case SampleRender::BufferType::INVALID_BUFFER_TYPE:
+			return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+	}
+}
+
+D3D12_RESOURCE_DIMENSION SampleRender::D3D12Shader::GetNativeTensor(TextureTensor tensor)
+{
+	switch (tensor)
+	{
+		case SampleRender::TextureTensor::TENSOR_1:
+			return D3D12_RESOURCE_DIMENSION_TEXTURE1D;
+		case SampleRender::TextureTensor::TENSOR_2:
+			return D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+		case SampleRender::TextureTensor::TENSOR_3:
+			return D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+		default:
+			return D3D12_RESOURCE_DIMENSION_UNKNOWN;
+	}
+}
+
+D3D12_FILTER SampleRender::D3D12Shader::GetNativeFilter(SamplerFilter filter)
+{
+	switch (filter)
+	{
+		default:
+		case SampleRender::SamplerFilter::LINEAR:
+			return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR;
+		case SampleRender::SamplerFilter::NEAREST:
+			return D3D12_FILTER_COMPARISON_MIN_MAG_MIP_POINT;
+		case SampleRender::SamplerFilter::ANISOTROPIC:
+			return D3D12_FILTER_ANISOTROPIC;
+	}
+}
+
+D3D12_TEXTURE_ADDRESS_MODE SampleRender::D3D12Shader::GetNativeAddressMode(AddressMode addressMode)
+{
+	switch (addressMode)
+	{
+		default:
+		case SampleRender::AddressMode::REPEAT:
+			return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		case SampleRender::AddressMode::MIRROR:
+			return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;
+		case SampleRender::AddressMode::CLAMP:
+			return D3D12_TEXTURE_ADDRESS_MODE_CLAMP;
+		case SampleRender::AddressMode::BORDER:
+			return D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		case SampleRender::AddressMode::MIRROR_ONCE:
+			return D3D12_TEXTURE_ADDRESS_MODE_MIRROR_ONCE;
 	}
 }

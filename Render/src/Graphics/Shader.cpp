@@ -26,7 +26,7 @@ SampleRender::Shader* SampleRender::Shader::Instantiate(const std::shared_ptr<Gr
 	{
 		controller_path << ".d3d12.json";
 		std::string json_controller_path = controller_path.str();
-		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout);
+		return new D3D12Shader((const std::shared_ptr<D3D12Context>*)(context), json_controller_path, layout, smallBufferLayout, uniformLayout, textureLayout, samplerLayout);
 	}
 #endif
 	case SampleRender::SAMPLE_RENDER_GRAPHICS_API_VK:

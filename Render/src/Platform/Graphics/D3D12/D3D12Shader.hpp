@@ -17,7 +17,7 @@ namespace SampleRender
 	class SAMPLE_RENDER_DLL_COMMAND D3D12Shader : public Shader
 	{
 	public:
-		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout);
+		D3D12Shader(const std::shared_ptr<D3D12Context>* context, std::string json_controller_path, InputBufferLayout layout, SmallBufferLayout smallBufferLayout, UniformLayout uniformLayout, TextureLayout textureLayout, SamplerLayout samplerLayout);
 		~D3D12Shader();
 
 		void Stage() override;
@@ -29,6 +29,8 @@ namespace SampleRender
 		void BindTexture(uint32_t shaderRegister) override;
 
 	private:
+		void CreateCopyPipeline();
+		void WaitCopyPipeline();
 
 		void CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device);
 		void BuildBlender(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
@@ -43,22 +45,45 @@ namespace SampleRender
 		bool IsSmallBufferValid(size_t size);
 		void BindSmallBufferIntern(const void* data, size_t size, uint32_t bindingSlot, size_t offset);
 
+		void AllocateTexture(TextureElement textureElement);
+		void CreateTextureAndHeap(TextureElement textureElement);
+		void CopyTextureBuffer(TextureElement textureElement);
+
+		void AllocateSampler(SamplerElement samplerElement);
+
 		void PushShader(std::string_view stage, D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);
 		void InitJsonAndPaths(std::string json_controller_path);
 
 		static DXGI_FORMAT GetNativeFormat(ShaderDataType type);
 		static D3D12_DESCRIPTOR_HEAP_TYPE GetNativeHeapType(BufferType type);
 		static D3D12_RESOURCE_DIMENSION GetNativeDimension(BufferType type);
+
+		static D3D12_RESOURCE_DIMENSION GetNativeTensor(TextureTensor tensor);
+		static D3D12_FILTER GetNativeFilter(SamplerFilter filter);
+		static D3D12_TEXTURE_ADDRESS_MODE GetNativeAddressMode(AddressMode addressMode);
+		
 		static const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> s_ShaderPusher;
 		static const std::list<std::string> s_GraphicsPipelineStages;
-
+		
 		std::unordered_map<uint32_t, ResourceAndHeap> m_CBuffers;
+		std::unordered_map<uint32_t, ResourceAndHeap> m_Textures;
+		std::unordered_map<uint32_t, ComPointer<ID3D12DescriptorHeap>> m_Samplers;
 
 		Json::Value m_PipelineInfo;
+
+		ComPointer<ID3D12CommandAllocator> m_CopyCommandAllocator;
+		ComPointer<ID3D12CommandQueue> m_CopyCommandQueue;
+		ComPointer<ID3D12GraphicsCommandList6> m_CopyCommandList;
+		ComPointer<ID3D12Fence> m_CopyFence;
+		uint64_t m_CopyFenceValue = 0;
+		HANDLE m_CopyFenceEvent;
 
 		InputBufferLayout m_Layout;
 		SmallBufferLayout m_SmallBufferLayout;
 		UniformLayout m_UniformLayout;
+		TextureLayout m_TextureLayout;
+		SamplerLayout m_SamplerLayout;
+
 		const std::shared_ptr<D3D12Context>* m_Context;
 		std::string m_ShaderDir;
 		ComPointer<IDxcBlob> m_RootBlob;
