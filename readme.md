@@ -7,13 +7,18 @@ used in a real Game Engine.
 Considering that D3D12 and Vulkan are 2 of the 3 most complex graphics API, this repository will
 help later on more complex features development.
 
+# Download
+
+To download this repository just run `git clone --recursive https://github.com/bmarques1995/Render.git` or,
+if you've forgotten to recursively clone, run in the repository `git submodule update --init --recursive`
+
 # Build
 
 This repository is built under cmake and is structured in following distribution (each `-` indicates
 one level dir):
 
 - `-cmake_helpers`: A submodule with a set of cmake helpers, going from dependencies tracing to installers
-- `-installers`: A set of PowerShell, and futurely Bash, scripts to download the dependencies
+- `-installers`: A set of PowerShell, and futurely Bash, scripts to download the dependencies, for a real project, i will use an own multiplatform script language
 - `-Render`: Default rendering library
 - `-ShaderManager`: Library renponsible to compile shaders and generate metadata
 - `-TargetView`: Executable, encapsulates all the application
