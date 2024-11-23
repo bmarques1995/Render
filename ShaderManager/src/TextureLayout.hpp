@@ -17,7 +17,7 @@ namespace SampleRender
 	{
 	public:
 		TextureElement();
-		TextureElement(std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1);
+		TextureElement(std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t spaceSet, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1);
 
 		const uint8_t* GetTextureBuffer() const;
 		uint32_t GetWidth() const;
@@ -28,11 +28,13 @@ namespace SampleRender
 		TextureTensor GetTensor() const;
 		uint32_t GetBindingSlot() const;
 		uint32_t GetShaderRegister() const;
+		uint32_t GetSpaceSet() const;
 		uint32_t GetSamplerRegister() const;
 	private:
 		TextureTensor m_Tensor;
 		std::shared_ptr<Image> m_Image;
 		size_t m_Depth;
+		uint32_t m_SpaceSet;
 		uint32_t m_BindingSlot;
 		uint32_t m_ShaderRegister;
 		uint32_t m_SamplerRegister;

@@ -61,17 +61,18 @@ SampleRender::Application::Application(std::string programLocation) :
 		{ 0, 192, 0, m_Context->GetSmallBufferAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
+	//BufferType bufferType, size_t size, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t spaceSet, uint32_t bufferAttachment
 	UniformLayout uniformLayout(
 	{
-		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, 1, m_Context->GetUniformAttachment() }
+		{ BufferType::UNIFORM_CONSTANT_BUFFER, 256, 1, 1, 0, m_Context->GetUniformAttachment() }
 	}, AllowedStages::VERTEX_STAGE | AllowedStages::PIXEL_STAGE);
 
 	std::shared_ptr<Image> img;
 	img.reset(Image::CreateImage("./assets/textures/yor.png"));
-	//std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1
+	//std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t spaceSet, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1
 	TextureLayout textureLayout(
 		{
-			{img, 2, 2, 0, TextureTensor::TENSOR_2, 1}
+			{img, 2, 2, 0, 0, TextureTensor::TENSOR_2, 1}
 		}
 	);
 	SamplerLayout samplerLayout(

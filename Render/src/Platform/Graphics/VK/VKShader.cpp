@@ -89,6 +89,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
     CreateDescriptorSetLayout();
     
     {
+        PreallocatesDescSets();
         auto uniforms = m_UniformLayout.GetElements();
 
         for (const auto& element : uniforms)
@@ -255,7 +256,42 @@ void SampleRender::VKShader::BindTexture(uint32_t bindingSlot)
 {
     auto commandBuffer = (*m_Context)->GetCurrentCommandBuffer();
     auto textureElement = m_TextureLayout.GetElement(bindingSlot);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[textureElement.GetSpaceSet()], 0, nullptr);
+}
+
+void SampleRender::VKShader::PreallocatesDescSets()
+{
+    auto device = (*m_Context)->GetDevice();
+
+    VkResult vkr;
+    auto textures = m_TextureLayout.GetElements();
+    auto uniforms = m_UniformLayout.GetElements();
+
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = m_DescriptorPool;
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = &m_RootSignature;
+
+    for (auto& uniformElement : uniforms)
+    {
+        if (m_DescriptorSets.find(uniformElement.second.GetSpaceSet()) == m_DescriptorSets.end())
+        {
+            vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[uniformElement.second.GetSpaceSet()]);
+            assert(vkr == VK_SUCCESS);
+        }
+    }
+
+    for (auto& textureElement : textures)
+    {
+        if (m_DescriptorSets.find(textureElement.second.GetSpaceSet()) == m_DescriptorSets.end())
+        {
+            vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSets[textureElement.second.GetSpaceSet()]);
+            assert(vkr == VK_SUCCESS);
+        }
+    }
+
+    
 }
 
 void SampleRender::VKShader::CreateCopyPipeline()
@@ -370,7 +406,7 @@ void SampleRender::VKShader::BindUniform(uint32_t bindingSlot)
 {
     auto commandBuffer = (*m_Context)->GetCurrentCommandBuffer();
     auto uniformElement = m_UniformLayout.GetElement(bindingSlot);
-    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSet, 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_PipelineLayout, 0, 1, &m_DescriptorSets[uniformElement.GetSpaceSet()], 0, nullptr);
 }
 
 uint32_t SampleRender::VKShader::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
@@ -697,19 +733,10 @@ void SampleRender::VKShader::CreateDescriptorSets()
     std::vector<VkDescriptorImageInfo> imageInfos;
     std::vector<VkDescriptorBufferInfo> bufferInfos;
     
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = m_DescriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &m_RootSignature;
-
     auto textures = m_TextureLayout.GetElements();
     auto uniforms = m_UniformLayout.GetElements();
     
     size_t i = 0;
-
-    vkr = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
-    assert(vkr == VK_SUCCESS);
 
     for (auto& uniformElement : uniforms)
     {
@@ -722,7 +749,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = m_DescriptorSet;
+        descriptorWrite.dstSet = m_DescriptorSets[uniformElement.second.GetSpaceSet()];
         descriptorWrite.dstBinding = uniformElement.second.GetShaderRegister();
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = GetNativeDescriptorType(uniformElement.second.GetBufferType());
@@ -737,7 +764,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
     for (auto& textureElement : textures)
     {
         
-        assert(vkr == VK_SUCCESS);
+        //assert(vkr == VK_SUCCESS);
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -748,7 +775,7 @@ void SampleRender::VKShader::CreateDescriptorSets()
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = m_DescriptorSet;
+        descriptorWrite.dstSet = m_DescriptorSets[textureElement.second.GetSpaceSet()];
         descriptorWrite.dstBinding = textureElement.second.GetShaderRegister();
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = GetNativeDescriptorType(BufferType::TEXTURE_BUFFER);

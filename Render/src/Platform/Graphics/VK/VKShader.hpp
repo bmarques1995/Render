@@ -43,6 +43,8 @@ namespace SampleRender
 
 	private:
 
+		void PreallocatesDescSets();
+
 		void CreateCopyPipeline();
 		QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice adapter);
 
@@ -91,7 +93,7 @@ namespace SampleRender
 		std::unordered_map<uint32_t, RM> m_Uniforms;
 		std::unordered_map<uint32_t, VkSampler> m_Samplers;
 		std::unordered_map<uint32_t, IMGB> m_Textures;
-		VkDescriptorSet m_DescriptorSet;
+		std::unordered_map<uint32_t, VkDescriptorSet> m_DescriptorSets;
 		//std::unordered_map<uint32_t, DescriptorTable> m_UniformsTable;
 		//std::unordered_map<uint32_t, DescriptorTable> m_TexturesTable;
 		

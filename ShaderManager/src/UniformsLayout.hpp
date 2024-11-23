@@ -69,12 +69,13 @@ namespace SampleRender
 	{
 	public:
 		UniformElement();
-		UniformElement(BufferType bufferType, size_t size, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t bufferAttachment);
+		UniformElement(BufferType bufferType, size_t size, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t spaceSet, uint32_t bufferAttachment);
 
 		BufferType GetBufferType() const;
 		size_t GetSize() const;
 		uint32_t GetBindingSlot() const;
 		uint32_t GetShaderRegister() const;
+		uint32_t GetSpaceSet() const;
 
 		bool IsSizeValid(uint32_t bufferAttachment);
 
@@ -85,6 +86,7 @@ namespace SampleRender
 		
 		uint32_t m_BindingSlot;
 		uint32_t m_ShaderRegister;
+		uint32_t m_SpaceSet;
 	};
 
 	class SAMPLE_SHADER_MNG_DLL_COMMAND UniformLayout
