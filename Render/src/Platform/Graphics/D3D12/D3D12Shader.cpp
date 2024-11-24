@@ -351,6 +351,7 @@ void SampleRender::D3D12Shader::AllocateTexture(TextureElement textureElement)
 void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureElement)
 {
 	auto device = (*m_Context)->GetDevicePtr();
+	auto allocator = (*m_Context)->GetMemoryAllocator();
 	HRESULT hr;
 
 	D3D12_DESCRIPTOR_HEAP_DESC srvDescriptorHeapDesc{};
@@ -381,14 +382,13 @@ void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureEleme
 	heapProps.CreationNodeMask = 1;
 	heapProps.VisibleNodeMask = 1;
 
-	hr = device->CreateCommittedResource2(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&textureBufferDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		nullptr,
-		IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Resource.GetAddressOf()));
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	hr = allocator->CreateResource2(
+		&allocDesc, &textureBufferDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		m_Textures[textureElement.GetBindingSlot()].Allocation.GetAddressOf(), IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Resource.GetAddressOf()));
 
 	assert(hr == S_OK);
 
@@ -429,7 +429,9 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 {
 	HRESULT hr;
 	auto device = (*m_Context)->GetDevicePtr();
+	auto allocator = (*m_Context)->GetMemoryAllocator();
 	ComPointer<ID3D12Resource2> textureBuffer;
+	ComPointer<D3D12MA::Allocation> textureBufferAllocation;
 
 	D3D12_RESOURCE_DESC uploadBufferDesc = {};
 	uploadBufferDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -441,18 +443,13 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	uploadBufferDesc.SampleDesc.Count = 1;
 	uploadBufferDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
 
-	D3D12_HEAP_PROPERTIES uploadHeapProperties = {};
-	uploadHeapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
 
-	hr = device->CreateCommittedResource1(
-		&uploadHeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&uploadBufferDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,  // Upload heap is CPU-accessible
-		nullptr,
-		nullptr,
-		IID_PPV_ARGS(textureBuffer.GetAddressOf())
-	);
+	hr = allocator->CreateResource(
+		&allocDesc, &uploadBufferDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		textureBufferAllocation.GetAddressOf(), IID_PPV_ARGS(textureBuffer.GetAddressOf()));
 
 	assert(hr == S_OK);
 

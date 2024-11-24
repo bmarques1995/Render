@@ -32,6 +32,7 @@ SampleRender::D3D12Context::~D3D12Context()
 	delete[] m_CommandLists;
 	delete[] m_CommandAllocators;
 	m_DepthStencilView.Release();
+	m_DSVAllocation.Release();
 	delete[] m_RenderTargets;
 	delete[] m_RTVHandles;
 	m_SwapChain.Release();
@@ -382,21 +383,13 @@ void SampleRender::D3D12Context::CreateDepthStencilView()
 	depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
 	depthOptimizedClearValue.DepthStencil.Stencil = 0;
 
-	D3D12_HEAP_PROPERTIES heapProps = {};
-	heapProps.Type = D3D12_HEAP_TYPE_DEFAULT;
-	heapProps.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-	heapProps.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-	heapProps.CreationNodeMask = 1;
-	heapProps.VisibleNodeMask = 1;
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-	hr = m_Device->CreateCommittedResource2(
-		&heapProps,
-		D3D12_HEAP_FLAG_NONE,
-		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		&depthOptimizedClearValue,
-		nullptr,
-		IID_PPV_ARGS(m_DepthStencilView.GetAddressOf()));
+	hr = m_Allocator->CreateResource2(
+		&allocDesc, &depthStencilDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+		m_DSVAllocation.GetAddressOf(), IID_PPV_ARGS(m_DepthStencilView.GetAddressOf()));
 	assert(hr == S_OK);
 
 	// Create the depth/stencil view

@@ -18,7 +18,7 @@ namespace SampleRender
 	struct IMGB
 	{
 		VkImage Resource;
-		VkDeviceMemory Memory;
+		VmaAllocation Allocation;
 		VkImageView View;
 	};
 

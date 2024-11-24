@@ -89,6 +89,7 @@ namespace SampleRender
 		D3D12_CPU_DESCRIPTOR_HANDLE* m_RTVHandles;
 		ComPointer<ID3D12DescriptorHeap> m_DSVHeap;
 		ComPointer<ID3D12Resource2> m_DepthStencilView;
+		ComPointer<D3D12MA::Allocation> m_DSVAllocation;
 		D3D12_CPU_DESCRIPTOR_HANDLE m_DSVHandle;
 		uint32_t m_FramesInFlight;
 		D3D12_CLEAR_VALUE m_ClearColor;

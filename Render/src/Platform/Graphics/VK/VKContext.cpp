@@ -822,32 +822,14 @@ void SampleRender::VKContext::CreateDepthStencilView()
     imageInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  
-    vkr = vkCreateImage(m_Device, &imageInfo, nullptr, &m_DepthStencilBuffer);
+
+    VmaAllocationCreateInfo imageAllocCreateInfo = {};
+    imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
+
+    VmaAllocationInfo depthImageAllocInfo = {};
+    
+    vkr = vmaCreateImage(m_Allocator, &imageInfo, &imageAllocCreateInfo, &m_DepthStencilBuffer, &m_DSVAllocation, &depthImageAllocInfo);
     (vkr == VK_SUCCESS);
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(m_Device, m_DepthStencilBuffer, &memRequirements);
-
-    VkPhysicalDeviceMemoryProperties memProperties;
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = 0xffffffffu;
-        
-    vkGetPhysicalDeviceMemoryProperties(m_Adapter, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
-            allocInfo.memoryTypeIndex = i;
-        }
-    }
-        
-
-    vkr = vkAllocateMemory(m_Device, &allocInfo, nullptr, &m_DepthStencilMemory);
-    assert(vkr == VK_SUCCESS);
-
-    vkBindImageMemory(m_Device, m_DepthStencilBuffer, m_DepthStencilMemory, 0);
   
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -867,8 +849,7 @@ void SampleRender::VKContext::CreateDepthStencilView()
 void SampleRender::VKContext::CleanupDepthStencilView()
 {
     vkDestroyImageView(m_Device, m_DepthStencilView, nullptr);
-    vkDestroyImage(m_Device, m_DepthStencilBuffer, nullptr);
-    vkFreeMemory(m_Device, m_DepthStencilMemory, nullptr);
+    vmaDestroyImage(m_Allocator, m_DepthStencilBuffer, m_DSVAllocation);
 }
 
 void SampleRender::VKContext::CreateCommandPool()

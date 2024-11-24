@@ -189,8 +189,7 @@ SampleRender::VKShader::~VKShader()
     for (auto& i : m_Textures)
     {
         vkDestroyImageView(device, i.second.View, nullptr);
-        vkFreeMemory(device, i.second.Memory, nullptr);
-        vkDestroyImage(device, i.second.Resource, nullptr);
+        vmaDestroyImage(allocator, i.second.Resource, i.second.Allocation);
     }
 
     for (auto& i : m_Samplers)
@@ -380,9 +379,6 @@ void SampleRender::VKShader::PreallocateUniform(const void* data, UniformElement
     vkr = vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &m_Uniforms[uniformElement.GetBindingSlot()].Resource, &m_Uniforms[uniformElement.GetBindingSlot()].Allocation, nullptr);
     assert(vkr == VK_SUCCESS);
 
-    //vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Resource);
-    //assert(vkr == VK_SUCCESS);
-
     MapUniform(data, uniformElement.GetSize(), uniformElement.GetBindingSlot());
 }
 
@@ -429,6 +425,7 @@ void SampleRender::VKShader::AllocateTexture(TextureElement textureElement)
 {
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
+    auto allocator = (*m_Context)->GetAllocator();
     VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
     VkImageCreateInfo imageInfo{};
@@ -448,22 +445,13 @@ void SampleRender::VKShader::AllocateTexture(TextureElement textureElement)
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkr = vkCreateImage(device, &imageInfo, nullptr, &m_Textures[textureElement.GetShaderRegister()].Resource);
-    assert(vkr == VK_SUCCESS);
+    VmaAllocationCreateInfo imageAllocCreateInfo = {};
+    imageAllocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
 
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(device, m_Textures[textureElement.GetShaderRegister()].Resource, &memRequirements);
+    VmaAllocationInfo depthImageAllocInfo = {};
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
-
-    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &m_Textures[textureElement.GetShaderRegister()].Memory);
-    assert(vkr == VK_SUCCESS);
-
-    vkr = vkBindImageMemory(device, m_Textures[textureElement.GetShaderRegister()].Resource, m_Textures[textureElement.GetShaderRegister()].Memory, 0);
-    assert(vkr == VK_SUCCESS);
+    vkr = vmaCreateImage(allocator, &imageInfo, &imageAllocCreateInfo, &m_Textures[textureElement.GetShaderRegister()].Resource, &m_Textures[textureElement.GetShaderRegister()].Allocation, &depthImageAllocInfo);
+    (vkr == VK_SUCCESS);
 
     VkImageViewCreateInfo viewInfo{};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -485,10 +473,11 @@ void SampleRender::VKShader::CopyTextureBuffer(TextureElement textureElement)
 {
     VkResult vkr;
     auto device = (*m_Context)->GetDevice();
+    auto allocator = (*m_Context)->GetAllocator();
     VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
     VkBuffer stagingBuffer;
-    VkDeviceMemory stagingBufferMemory;
+    VmaAllocation stagingBufferAllocation;
     size_t imageSize = (textureElement.GetWidth() * textureElement.GetHeight() * textureElement.GetDepth() * textureElement.GetChannels());
 
     VkBufferCreateInfo bufferInfo{};
@@ -497,27 +486,19 @@ void SampleRender::VKShader::CopyTextureBuffer(TextureElement textureElement)
     bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &stagingBuffer);
+    // Define allocation info
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO; // Automatically select memory type
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; // Optional: Use dedicated memory
+
+    vkr = vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &stagingBuffer, &stagingBufferAllocation, nullptr);
     assert(vkr == VK_SUCCESS);
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, stagingBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, properties);
-
-    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &stagingBufferMemory);
-    assert(vkr == VK_SUCCESS);
-
-    vkBindBufferMemory(device, stagingBuffer, stagingBufferMemory, 0);
-
-    void* GPUData = nullptr;
-    vkr = vkMapMemory(device, stagingBufferMemory, 0, imageSize, 0, &GPUData);
+    void* GPUData;
+    vkr = vmaMapMemory(allocator, stagingBufferAllocation, &GPUData);
     assert(vkr == VK_SUCCESS);
     memcpy(GPUData, textureElement.GetTextureBuffer(), imageSize);
-    vkUnmapMemory(device, stagingBufferMemory);
+    vmaUnmapMemory(allocator, stagingBufferAllocation);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -605,8 +586,7 @@ void SampleRender::VKShader::CopyTextureBuffer(TextureElement textureElement)
     vkQueueSubmit(m_CopyQueue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(m_CopyQueue);
 
-    vkDestroyBuffer(device, stagingBuffer, nullptr);
-    vkFreeMemory(device, stagingBufferMemory, nullptr);
+    vmaDestroyBuffer(allocator, stagingBuffer, stagingBufferAllocation);
 }
 
 void SampleRender::VKShader::CreateSampler(SamplerElement samplerElement)

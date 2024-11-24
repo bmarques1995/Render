@@ -152,7 +152,7 @@ namespace SampleRender
 		VkFramebuffer* m_SwapChainFramebuffers;
 		
 		VkImage m_DepthStencilBuffer;
-		VkDeviceMemory m_DepthStencilMemory;
+		VmaAllocation m_DSVAllocation;
 		VkImageView m_DepthStencilView;
 
 		const bool* m_IsWindowClosing;
