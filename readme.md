@@ -34,7 +34,8 @@ will be quick.
 
 Disclaimer 2: you will need admin privileges on windows to run the vulkan version, it will record in HKEY_LOCAL_MACHINE,
 the validation layer and the extensions, that requires the admin privilege, by default, this option will be disabled,
-if you want to set the vulkan layers location in regedit, just run `cmake --preset <preset_name> -DREGISTER_VULKAN_LAYERS=ON`
+if you want to set the vulkan layers location in regedit, just run `cmake --preset <preset_name> -DREGISTER_VULKAN_LAYERS=ON`.
+THE PROGRAM WILL NOT WORK if the vulkan layers isn't being set, but the regedit settings only needs to run once, and running it all times is annoying.
 
 # Running
 
