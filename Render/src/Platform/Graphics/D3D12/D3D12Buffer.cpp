@@ -46,7 +46,7 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 
 	hr = allocator->CreateResource2(
 		&allocDesc, &resourceDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 		m_Allocation.GetAddressOf(), IID_PPV_ARGS(m_Buffer.GetAddressOf()));
 	assert(hr == S_OK);
 
@@ -55,6 +55,12 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 	assert(hr == S_OK);
 	memcpy(gpuData, data, size);
 	m_Buffer->Unmap(0, NULL);
+}
+
+void SampleRender::D3D12Buffer::DestroyBuffer()
+{
+	m_Buffer.Release();
+	m_Allocation.Release();
 }
 
 SampleRender::D3D12VertexBuffer::D3D12VertexBuffer(const std::shared_ptr<D3D12Context>* context, const void* data, size_t size, uint32_t stride) :
@@ -70,6 +76,7 @@ SampleRender::D3D12VertexBuffer::D3D12VertexBuffer(const std::shared_ptr<D3D12Co
 
 SampleRender::D3D12VertexBuffer::~D3D12VertexBuffer()
 {
+	DestroyBuffer();
 }
 
 void SampleRender::D3D12VertexBuffer::Stage() const
@@ -91,6 +98,7 @@ SampleRender::D3D12IndexBuffer::D3D12IndexBuffer(const std::shared_ptr<D3D12Cont
 
 SampleRender::D3D12IndexBuffer::~D3D12IndexBuffer()
 {
+	DestroyBuffer();
 }
 
 void SampleRender::D3D12IndexBuffer::Stage() const

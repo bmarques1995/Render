@@ -388,7 +388,7 @@ void SampleRender::D3D12Context::CreateDepthStencilView()
 
 	hr = m_Allocator->CreateResource2(
 		&allocDesc, &depthStencilDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST, nullptr,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE, nullptr,
 		m_DSVAllocation.GetAddressOf(), IID_PPV_ARGS(m_DepthStencilView.GetAddressOf()));
 	assert(hr == S_OK);
 

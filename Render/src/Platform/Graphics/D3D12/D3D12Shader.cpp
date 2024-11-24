@@ -105,6 +105,7 @@ SampleRender::D3D12Shader::~D3D12Shader()
 	{
 		i.second.Resource.Release();
 		i.second.Heap.Release();
+		i.second.Allocation.Release();
 	}
 }
 
@@ -309,7 +310,7 @@ void SampleRender::D3D12Shader::PreallocateCBuffer(const void* data, UniformElem
 
 	hr = allocator->CreateResource2(
 		&allocDesc, &constantBufferDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 		m_CBuffers[uniformElement.GetBindingSlot()].Allocation.GetAddressOf(), IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Resource.GetAddressOf()));
 
 	assert(hr == S_OK);
@@ -387,7 +388,7 @@ void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureEleme
 
 	hr = allocator->CreateResource2(
 		&allocDesc, &textureBufferDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 		m_Textures[textureElement.GetBindingSlot()].Allocation.GetAddressOf(), IID_PPV_ARGS(m_Textures[textureElement.GetBindingSlot()].Resource.GetAddressOf()));
 
 	assert(hr == S_OK);
@@ -448,7 +449,7 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 
 	hr = allocator->CreateResource(
 		&allocDesc, &uploadBufferDesc,
-		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		D3D12_RESOURCE_STATE_GENERIC_READ, NULL,
 		textureBufferAllocation.GetAddressOf(), IID_PPV_ARGS(textureBuffer.GetAddressOf()));
 
 	assert(hr == S_OK);
