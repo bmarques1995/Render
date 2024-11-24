@@ -44,3 +44,7 @@ you can edit the json file and edit the graphics API property, with the followin
 
 - `SAMPLE_RENDER_GRAPHICS_API_VK`
 - `SAMPLE_RENDER_GRAPHICS_API_D3D12`
+
+# VMA and D3D12MA
+
+The branch `v_d3d12_ma` is a sample render version using VMA and D3D12MA. Is in a separated branch because I need to keep the regular version.
