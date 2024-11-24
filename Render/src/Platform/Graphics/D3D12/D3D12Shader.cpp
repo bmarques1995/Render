@@ -260,6 +260,7 @@ void SampleRender::D3D12Shader::PreallocateCBuffer(const void* data, UniformElem
 		throw AttachmentMismatchException(uniformElement.GetSize(), (*m_Context)->GetSmallBufferAttachment());
 
 	auto device = (*m_Context)->GetDevicePtr();
+	auto allocator = (*m_Context)->GetMemoryAllocator();
 	HRESULT hr;
 
 	m_CBuffers[uniformElement.GetBindingSlot()] = {nullptr, {}};
@@ -294,15 +295,23 @@ void SampleRender::D3D12Shader::PreallocateCBuffer(const void* data, UniformElem
 	heapProps.CreationNodeMask = 1;
 	heapProps.VisibleNodeMask = 1;
 
-	hr = device->CreateCommittedResource2(
+	/*hr = device->CreateCommittedResource2(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&constantBufferDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		nullptr,
-		IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Resource.GetAddressOf()));
+		IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Resource.GetAddressOf()));*/
 	
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+	hr = allocator->CreateResource2(
+		&allocDesc, &constantBufferDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		m_CBuffers[uniformElement.GetBindingSlot()].Allocation.GetAddressOf(), IID_PPV_ARGS(m_CBuffers[uniformElement.GetBindingSlot()].Resource.GetAddressOf()));
+
 	assert(hr == S_OK);
 
 	D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc;

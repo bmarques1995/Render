@@ -12,7 +12,7 @@ namespace SampleRender
 	struct RM
 	{
 		VkBuffer Resource;
-		VkDeviceMemory Memory;
+		VmaAllocation Allocation;
 	};
 
 	struct IMGB

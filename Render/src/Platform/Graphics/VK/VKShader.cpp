@@ -180,6 +180,7 @@ SampleRender::VKShader::VKShader(const std::shared_ptr<VKContext>* context, std:
 SampleRender::VKShader::~VKShader()
 {
     auto device = (*m_Context)->GetDevice();
+    auto allocator = (*m_Context)->GetAllocator();
     vkDeviceWaitIdle(device);
 
     vkFreeCommandBuffers(device, m_CopyCommandPool, 1, &m_CopyCommandBuffer);
@@ -198,8 +199,7 @@ SampleRender::VKShader::~VKShader()
     }
     for (auto& i : m_Uniforms)
     {
-        vkDestroyBuffer(device, i.second.Resource, nullptr);
-        vkFreeMemory(device, i.second.Memory, nullptr);
+        vmaDestroyBuffer(allocator, i.second.Resource, i.second.Allocation);
     }
     vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device, m_RootSignature, nullptr);
@@ -362,7 +362,8 @@ void SampleRender::VKShader::PreallocateUniform(const void* data, UniformElement
         throw AttachmentMismatchException(uniformElement.GetSize(), (*m_Context)->GetUniformAttachment());
 
     VkResult vkr;
-    auto device = (*m_Context)->GetDevice();
+    //auto device = (*m_Context)->GetDevice();
+    auto allocator = (*m_Context)->GetAllocator();
     VkDeviceSize bufferSize = uniformElement.GetSize();
     m_Uniforms[uniformElement.GetBindingSlot()] = {};
 
@@ -372,21 +373,15 @@ void SampleRender::VKShader::PreallocateUniform(const void* data, UniformElement
     bufferInfo.usage = GetNativeBufferUsage(uniformElement.GetBufferType());
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Resource);
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO; // Automatically select memory type
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT; // Optional: Use dedicated memory
+
+    vkr = vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &m_Uniforms[uniformElement.GetBindingSlot()].Resource, &m_Uniforms[uniformElement.GetBindingSlot()].Allocation, nullptr);
     assert(vkr == VK_SUCCESS);
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, m_Uniforms[uniformElement.GetBindingSlot()].Resource, &memRequirements);
-
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    vkr = vkAllocateMemory(device, &allocInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Memory);
-    assert(vkr == VK_SUCCESS);
-
-    vkBindBufferMemory(device, m_Uniforms[uniformElement.GetBindingSlot()].Resource, m_Uniforms[uniformElement.GetBindingSlot()].Memory, 0);
+    //vkr = vkCreateBuffer(device, &bufferInfo, nullptr, &m_Uniforms[uniformElement.GetBindingSlot()].Resource);
+    //assert(vkr == VK_SUCCESS);
 
     MapUniform(data, uniformElement.GetSize(), uniformElement.GetBindingSlot());
 }
@@ -395,11 +390,11 @@ void SampleRender::VKShader::MapUniform(const void* data, size_t size, uint32_t 
 {
     VkResult vkr;
     void* gpuData;
-    auto device = (*m_Context)->GetDevice();
-    vkr = vkMapMemory(device, m_Uniforms[bindingSlot].Memory, 0, size, 0, &gpuData);
+    auto allocator = (*m_Context)->GetAllocator();
+    vkr = vmaMapMemory(allocator, m_Uniforms[bindingSlot].Allocation, &gpuData);
     assert(vkr == VK_SUCCESS);
     memcpy(gpuData, data, size);
-    vkUnmapMemory(device, m_Uniforms[bindingSlot].Memory);
+    vmaUnmapMemory(allocator, m_Uniforms[bindingSlot].Allocation);
 }
 
 void SampleRender::VKShader::BindUniform(uint32_t bindingSlot)

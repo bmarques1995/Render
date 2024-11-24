@@ -8,9 +8,10 @@
 
 namespace SampleRender
 {
-	struct ResourceAndHeap
+	struct ResourceHeapAndAllocation
 	{
 		ComPointer<ID3D12Resource2> Resource;
+		ComPointer<D3D12MA::Allocation> Allocation;
 		ComPointer<ID3D12DescriptorHeap> Heap;
 	};
 
@@ -65,8 +66,8 @@ namespace SampleRender
 		static const std::unordered_map<std::string, std::function<void(IDxcBlob**, D3D12_GRAPHICS_PIPELINE_STATE_DESC*)>> s_ShaderPusher;
 		static const std::list<std::string> s_GraphicsPipelineStages;
 		
-		std::unordered_map<uint32_t, ResourceAndHeap> m_CBuffers;
-		std::unordered_map<uint32_t, ResourceAndHeap> m_Textures;
+		std::unordered_map<uint32_t, ResourceHeapAndAllocation> m_CBuffers;
+		std::unordered_map<uint32_t, ResourceHeapAndAllocation> m_Textures;
 		std::unordered_map<uint32_t, ComPointer<ID3D12DescriptorHeap>> m_Samplers;
 
 		Json::Value m_PipelineInfo;
