@@ -16,6 +16,7 @@ SampleRender::D3D12Context::D3D12Context(const Window* windowHandle, uint32_t fr
 	CreateFactory();
 	CreateAdapter();
 	CreateDevice();
+	CreateAllocator();
 	CreateCommandQueue();
 	CreateViewportAndScissor(windowHandle->GetWidth(), windowHandle->GetHeight());
 	CreateSwapChain(std::any_cast<HWND>(windowHandle->GetNativePointer()));
@@ -147,6 +148,11 @@ ID3D12GraphicsCommandList6* SampleRender::D3D12Context::GetCurrentCommandList() 
 	return m_CommandLists[m_CurrentBufferIndex].GetConst();
 }
 
+D3D12MA::Allocator* SampleRender::D3D12Context::GetMemoryAllocator() const
+{
+	return m_Allocator.GetConst();
+}
+
 const std::string SampleRender::D3D12Context::GetGPUName()
 {
 	DXGI_ADAPTER_DESC gpuDescription;
@@ -225,6 +231,19 @@ void SampleRender::D3D12Context::CreateAdapter()
 void SampleRender::D3D12Context::CreateDevice()
 {
 	D3D12CreateDevice(m_DXGIAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(m_Device.GetAddressOf()));
+}
+
+void SampleRender::D3D12Context::CreateAllocator()
+{
+	HRESULT hr;
+
+	D3D12MA::ALLOCATOR_DESC desc = {};
+	desc.Flags = D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+	desc.pDevice = m_Device;
+	desc.pAdapter = m_DXGIAdapter;
+
+	hr = D3D12MA::CreateAllocator(&desc, m_Allocator.GetAddressOf());
+	assert(hr == S_OK);
 }
 
 void SampleRender::D3D12Context::CreateCommandQueue()

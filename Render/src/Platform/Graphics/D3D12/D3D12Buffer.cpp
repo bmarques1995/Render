@@ -10,10 +10,10 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 {
 	HRESULT hr;
 
-	D3D12_HEAP_PROPERTIES heapProps = {};
+	/*D3D12_HEAP_PROPERTIES heapProps = {};
 	heapProps.Type = D3D12_HEAP_TYPE_UPLOAD;
 	heapProps.CreationNodeMask = 1;
-	heapProps.VisibleNodeMask = 1;
+	heapProps.VisibleNodeMask = 1;*/
 
 	D3D12_RESOURCE_DESC1 resourceDesc = {};
 	resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -29,16 +29,25 @@ void SampleRender::D3D12Buffer::CreateBuffer(const void* data, size_t size)
 	resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
 	auto device = (*m_Context)->GetDevicePtr();
+	auto allocator = (*m_Context)->GetMemoryAllocator();
 	
 	D3D12_RANGE readRange = { 0 };
-	hr = device->CreateCommittedResource2(
+	/*hr = device->CreateCommittedResource2(
 		&heapProps,
 		D3D12_HEAP_FLAG_NONE,
 		&resourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		nullptr,
-		IID_PPV_ARGS(m_Buffer.GetAddressOf()));
+		IID_PPV_ARGS(m_Buffer.GetAddressOf()));*/
+
+	D3D12MA::ALLOCATION_DESC allocDesc = {};
+	allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+	hr = allocator->CreateResource2(
+		&allocDesc, &resourceDesc,
+		D3D12_RESOURCE_STATE_COPY_DEST, NULL,
+		m_Allocation.GetAddressOf(), IID_PPV_ARGS(m_Buffer.GetAddressOf()));
 	assert(hr == S_OK);
 
 	void* gpuData = nullptr;

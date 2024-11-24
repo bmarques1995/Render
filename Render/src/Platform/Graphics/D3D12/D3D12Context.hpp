@@ -8,6 +8,7 @@
 #include <windows.h>
 #include <dxgi1_6.h>
 #include <d3d12.h>
+#include <D3D12MemAlloc.h>
 
 #ifdef RENDER_DEBUG_MODE
 #include <dxgidebug.h>
@@ -37,6 +38,7 @@ namespace SampleRender
 
 		ID3D12Device10* GetDevicePtr() const;
 		ID3D12GraphicsCommandList6* GetCurrentCommandList() const;
+		D3D12MA::Allocator* GetMemoryAllocator() const;
 
 		const std::string GetGPUName() override;
 
@@ -46,6 +48,7 @@ namespace SampleRender
 		void CreateFactory();
 		void CreateAdapter();
 		void CreateDevice();
+		void CreateAllocator();
 		void CreateCommandQueue();
 		void CreateSwapChain(HWND windowHandle);
 		void CreateRenderTargetView();
@@ -92,6 +95,7 @@ namespace SampleRender
 
 		ComPointer<ID3D12CommandAllocator>* m_CommandAllocators;
 		ComPointer<ID3D12GraphicsCommandList6>* m_CommandLists;
+		ComPointer<D3D12MA::Allocator> m_Allocator;
 
 		UINT m_CurrentBufferIndex = -1;
 	};

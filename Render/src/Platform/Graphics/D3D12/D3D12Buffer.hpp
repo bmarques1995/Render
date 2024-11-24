@@ -13,6 +13,7 @@ namespace SampleRender
 		void CreateBuffer(const void* data, size_t size);
 
 		ComPointer<ID3D12Resource2> m_Buffer;
+		ComPointer<D3D12MA::Allocation> m_Allocation;
 		const std::shared_ptr<D3D12Context>* m_Context;
 	};
 
