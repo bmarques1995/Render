@@ -6,6 +6,7 @@
 
 #include <vulkan/vulkan.h>
 #include <optional>
+#include <vk_mem_alloc.h>
 
 namespace SampleRender
 {
@@ -53,6 +54,7 @@ namespace SampleRender
 		VkRenderPass GetRenderPass() const;
 		VkCommandBuffer GetCurrentCommandBuffer() const;
 		VkSurfaceKHR GetSurface() const;
+		VmaAllocator GetAllocator() const;
 	
 	private:
 		
@@ -87,7 +89,10 @@ namespace SampleRender
 
 		//Master
 		void CreateDevice();
-		
+
+		//Master
+		void CreateAllocator();
+
 		//Master
 		void CreateViewportAndScissor(uint32_t width, uint32_t height);
 
@@ -131,6 +136,7 @@ namespace SampleRender
 		VkPhysicalDevice m_Adapter = VK_NULL_HANDLE;
 		uint32_t m_UniformAttachment;
 		VkDevice m_Device;
+		VmaAllocator m_Allocator;
 		VkQueue m_GraphicsQueue;
 		VkQueue m_PresentQueue;
 		VkSwapchainKHR m_SwapChain;
@@ -168,5 +174,7 @@ namespace SampleRender
 		std::vector<const char*> m_InstanceExtensions;
 
 		std::string m_GPUName;
+
+		static const uint32_t s_VulkanVersion;
 	};
 }

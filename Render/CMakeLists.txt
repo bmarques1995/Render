@@ -31,6 +31,9 @@ trace_installable_file(NAME "VkLayer_khronos_synchronization2" INSTALL_SCRIPT "$
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "dll")
 trace_installable_file(NAME "VkLayer_khronos_validation" INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vulkan_validation.ps1" LOCATION "${CMAKE_PREFIX_PATH}/bin" EXTENSION "json")
 
+trace_dependency(NAME VulkanMemoryAllocator INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/vma.ps1")
+trace_dependency(NAME D3D12MemoryAllocator INSTALL_SCRIPT "${PROJECT_SOURCE_DIR}/installers/d3d12ma.ps1")
+
 if(REGISTER_VULKAN_LAYERS)
 
 	file(GLOB LAYER_FILES "${CMAKE_INSTALL_PREFIX}/bin/VkLayer_khronos_*.json")

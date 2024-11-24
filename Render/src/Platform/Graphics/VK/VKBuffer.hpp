@@ -10,13 +10,16 @@ namespace SampleRender
 	{
 	protected:
 		VKBuffer(const std::shared_ptr<VKContext>* context);
-		void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
+		void CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VmaAllocation& bufferMemory);
 		void CopyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 		uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+		void BuildBufferInstance(const void* data, size_t size, VkBufferUsageFlagBits bufferType);
+
+		void DestroyBuffer();
 
 		const std::shared_ptr<VKContext>* m_Context;
 		VkBuffer m_Buffer;
-		VkDeviceMemory m_BufferMemory;
+		VmaAllocation m_Allocation;
 	};
 
 	class SAMPLE_RENDER_DLL_COMMAND VKVertexBuffer : public VertexBuffer, public VKBuffer

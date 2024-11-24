@@ -42,6 +42,8 @@ const std::vector<const char*> SampleRender::VKContext::deviceExtensions =
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
+const uint32_t SampleRender::VKContext::s_VulkanVersion = VK_MAKE_API_VERSION(0, 1, 3, 290);
+
 SampleRender::VKContext::VKContext(const Window* windowHandle, uint32_t framesInFlight) :
     m_FramesInFlight(framesInFlight)
 {
@@ -61,6 +63,7 @@ SampleRender::VKContext::VKContext(const Window* windowHandle, uint32_t framesIn
     BufferizeUniformAttachment();
     GetGPUName();
     CreateDevice();
+    CreateAllocator();
     CreateViewportAndScissor(windowHandle->GetWidth(), windowHandle->GetHeight());
     CreateSwapChain();
     CreateImageView();
@@ -95,6 +98,7 @@ SampleRender::VKContext::~VKContext()
     vkDestroyRenderPass(m_Device, m_RenderPass, nullptr);
     CleanupImageView();
     CleanupSwapChain();
+    vmaDestroyAllocator(m_Allocator);
     vkDestroyDevice(m_Device, nullptr);
     vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 #ifdef RENDER_DEBUG_MODE
@@ -284,6 +288,11 @@ VkSurfaceKHR SampleRender::VKContext::GetSurface() const
     return m_Surface;
 }
 
+VmaAllocator SampleRender::VKContext::GetAllocator() const
+{
+    return m_Allocator;
+}
+
 void SampleRender::VKContext::CreateInstance()
 {
     VkResult vkr;
@@ -294,10 +303,10 @@ void SampleRender::VKContext::CreateInstance()
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "Hello Triangle";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 3, 290);
+    appInfo.applicationVersion = s_VulkanVersion;
     appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 3, 290);
-    appInfo.apiVersion = VK_MAKE_API_VERSION(0, 1, 3, 290);
+    appInfo.engineVersion = s_VulkanVersion;
+    appInfo.apiVersion = s_VulkanVersion;
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -525,6 +534,18 @@ void SampleRender::VKContext::CreateDevice()
 
     vkGetDeviceQueue(m_Device, indices.graphicsFamily.value(), 0, &m_GraphicsQueue);
     vkGetDeviceQueue(m_Device, indices.presentFamily.value(), 0, &m_PresentQueue);
+}
+
+void SampleRender::VKContext::CreateAllocator()
+{
+    // Initialize VulkanMemoryAllocator
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.vulkanApiVersion = s_VulkanVersion;
+    allocatorInfo.physicalDevice = m_Adapter;
+    allocatorInfo.device = m_Device;
+    allocatorInfo.instance = m_Instance;
+
+    vmaCreateAllocator(&allocatorInfo, &m_Allocator);
 }
 
 void SampleRender::VKContext::CreateViewportAndScissor(uint32_t width, uint32_t height)
