@@ -69,10 +69,13 @@ SampleRender::Application::Application(std::string programLocation) :
 
 	std::shared_ptr<Image> img;
 	img.reset(Image::CreateImage("./assets/textures/yor.png"));
+	std::shared_ptr<Image> img2;
+	img2.reset(Image::CreateImage("./assets/textures/sample.png"));
 	//std::shared_ptr<Image> img, uint32_t bindingSlot, uint32_t shaderRegister, uint32_t spaceSet, uint32_t samplerRegister, TextureTensor tensor, size_t depth = 1
 	TextureLayout textureLayout(
 		{
-			{img, 2, 2, 0, 0, TextureTensor::TENSOR_2, 1}
+			{img, 2, 2, 0, 0, TextureTensor::TENSOR_2, 1},
+			{img2, 3, 3, 0, 0, TextureTensor::TENSOR_2, 1}
 		}
 	);
 	SamplerLayout samplerLayout(
@@ -110,6 +113,7 @@ void SampleRender::Application::Run()
 				m_Shader->BindSmallBuffer(&m_SmallMVP.model(0, 0), sizeof(m_SmallMVP), 0);
 				m_Shader->BindUniforms(&m_CompleteMVP.model(0, 0), sizeof(m_CompleteMVP), 1);
 				m_Shader->BindTexture(2);
+				m_Shader->BindTexture(3);
 				m_VertexBuffer->Stage();
 				m_IndexBuffer->Stage();
 				m_Context->StageViewportAndScissors();

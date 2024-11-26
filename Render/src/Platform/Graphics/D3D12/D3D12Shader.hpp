@@ -31,7 +31,8 @@ namespace SampleRender
 
 	private:
 		void CreateCopyPipeline();
-		void WaitCopyPipeline();
+		void WaitCopyPipeline(UINT64 fenceValue = -1);
+		void OpenHandle();
 
 		void CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device);
 		void BuildBlender(D3D12_GRAPHICS_PIPELINE_STATE_DESC* graphicsDesc);

@@ -166,26 +166,40 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 	hr = device->CreateFence(m_CopyFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
 	assert(hr == S_OK);
 
-	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
-
 	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CopyCommandAllocator.GetAddressOf()));
+#ifdef _DEBUG
+	m_CopyCommandAllocator->SetName(L"CpCmdAlloc");
+#endif
 	assert(hr == S_OK);
 
 	hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_CopyCommandAllocator.Get(), nullptr, IID_PPV_ARGS(m_CopyCommandList.GetAddressOf()));
 	assert(hr == S_OK);
 }
 
-void SampleRender::D3D12Shader::WaitCopyPipeline()
+void SampleRender::D3D12Shader::WaitCopyPipeline(UINT64 fenceValue)
 {
-	m_CopyCommandQueue->Signal(m_CopyFence, 1);
+	HRESULT hr;
+	m_CopyCommandQueue->Signal(m_CopyFence.Get(), ++m_CopyFenceValue);
+	if (fenceValue == -1)
+		fenceValue = m_CopyFenceValue;
 	auto test = m_CopyFence->GetCompletedValue();
-	if (m_CopyFence->GetCompletedValue() < 1)
+	if (m_CopyFence->GetCompletedValue() < fenceValue)
 	{
-		m_CopyFence->SetEventOnCompletion(1, m_CopyFenceEvent);
-		WaitForSingleObject(m_CopyFenceEvent, INFINITE);
+		hr = m_CopyFence->SetEventOnCompletion(1, m_CopyFenceEvent);
+		if (hr == S_OK)
+		{
+			if (WaitForSingleObject(m_CopyFenceEvent, INFINITE) == WAIT_OBJECT_0)
+				while (m_CopyFence->GetCompletedValue() < fenceValue)
+					Sleep(1);
+		}
 	}
-
+	
 	CloseHandle(m_CopyFenceEvent);
+}
+
+void SampleRender::D3D12Shader::OpenHandle()
+{
+	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -393,6 +407,24 @@ void SampleRender::D3D12Shader::CreateTextureAndHeap(TextureElement textureEleme
 
 	assert(hr == S_OK);
 
+#ifdef _DEBUG
+
+	std::wstringstream bufferName;
+	std::wstring bufferNameParam;
+	bufferName << L"Texture_" << textureElement.GetBindingSlot();
+	bufferNameParam = bufferName.str();
+	m_Textures[textureElement.GetBindingSlot()].Resource->SetName(bufferNameParam.c_str());
+	bufferName.str(L"");
+	bufferName << L"TextureHeap_" << textureElement.GetBindingSlot();
+	bufferNameParam = bufferName.str();
+	m_Textures[textureElement.GetBindingSlot()].Heap->SetName(bufferNameParam.c_str());
+	bufferName.str(L"");
+	bufferName << L"TextureAllocator_" << textureElement.GetBindingSlot();
+	bufferNameParam = bufferName.str();
+	m_Textures[textureElement.GetBindingSlot()].Allocation->SetName(bufferNameParam.c_str());
+	bufferName.str(L"");
+#endif
+
 	auto srvHeapStartHandle = m_Textures[textureElement.GetBindingSlot()].Heap->GetCPUDescriptorHandleForHeapStart();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -479,6 +511,8 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 	textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+	OpenHandle();
+
 	D3D12_TEXTURE_COPY_LOCATION srcLocation = {};
 	srcLocation.pResource = textureBuffer.Get();
 	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
@@ -513,6 +547,9 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 
 	m_CopyCommandAllocator->Reset();
 	m_CopyCommandList->Reset(m_CopyCommandAllocator, nullptr);
+
+	textureBuffer.Release();
+	textureBufferAllocation.Release();
 }
 
 void SampleRender::D3D12Shader::AllocateSampler(SamplerElement samplerElement)

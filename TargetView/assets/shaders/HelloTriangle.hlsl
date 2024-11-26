@@ -4,7 +4,7 @@
 RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
 RootConstants(num32BitConstants=48, b0), \
 CBV(b1), \
-DescriptorTable(SRV(t1, numDescriptors = 1)), \
+DescriptorTable(SRV(t1, numDescriptors = 2)), \
 DescriptorTable(Sampler(s1, numDescriptors = 1)), \
 //StaticSampler( s2,\
 //                filter = FILTER_ANISOTROPIC,\
@@ -55,7 +55,7 @@ cbuffer u_SmallMVP : register(b0)
     CompleteMVP m_CompleteMVP;
 };
 
-[[vk::binding(2, 0)]] Texture2D textureChecker : register(t1);
+[[vk::binding(2, 0)]] Texture2D textureChecker[2] : register(t1);
 [[vk::binding(2, 0)]] SamplerState dynamicSampler : register(s1);
 
 struct VSInput
@@ -95,7 +95,7 @@ PSInput vs_main(VSInput vsInput)
 
 float4 ps_main(PSInput psInput) : SV_TARGET0
 {
-    float4 pixel = textureChecker.SampleLevel(dynamicSampler, psInput.txc, 0.0f);
+    float4 pixel = lerp(textureChecker[0].SampleLevel(dynamicSampler, psInput.txc, 0.0f), textureChecker[1].SampleLevel(dynamicSampler, psInput.txc, 0.0f), .6f);
     //float4 pixel = float4(1.0f);
     return float4(psInput.col.xyzw * pixel);
 }
