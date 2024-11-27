@@ -165,8 +165,6 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 	hr = device->CreateFence(m_CopyFenceValue, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_CopyFence.GetAddressOf()));
 	assert(hr == S_OK);
 
-	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
-
 	hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_CopyCommandAllocator.GetAddressOf()));
 	assert(hr == S_OK);
 
@@ -174,17 +172,32 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 	assert(hr == S_OK);
 }
 
-void SampleRender::D3D12Shader::WaitCopyPipeline()
+void SampleRender::D3D12Shader::WaitCopyPipeline(UINT64 fenceValue)
 {
-	m_CopyCommandQueue->Signal(m_CopyFence, 1);
-	auto test = m_CopyFence->GetCompletedValue();
-	if (m_CopyFence->GetCompletedValue() < 1)
+	HRESULT hr;
+	
+	m_CopyCommandQueue->Signal(m_CopyFence.Get(), ++m_CopyFenceValue);
+
+	bool continueWaiting = true;
+
+	if (fenceValue == -1)
+		fenceValue = m_CopyFenceValue;
+
+	if ((m_CopyFence->GetCompletedValue() < fenceValue)&& continueWaiting)
 	{
-		m_CopyFence->SetEventOnCompletion(1, m_CopyFenceEvent);
-		WaitForSingleObject(m_CopyFenceEvent, INFINITE);
+		hr = m_CopyFence->SetEventOnCompletion(fenceValue, m_CopyFenceEvent);
+		if (hr == S_OK)
+			continueWaiting = (WaitForSingleObject(m_CopyFenceEvent, INFINITE) != WAIT_OBJECT_0);
+		// Fallback wait
+		while (m_CopyFence->GetCompletedValue() < fenceValue) Sleep(1);
 	}
 
 	CloseHandle(m_CopyFenceEvent);
+}
+
+void SampleRender::D3D12Shader::OpenCopyFence()
+{
+	m_CopyFenceEvent = CreateEventW(nullptr, false, false, nullptr);
 }
 
 void SampleRender::D3D12Shader::CreateGraphicsRootSignature(ID3D12RootSignature** rootSignature, ID3D12Device10* device)
@@ -477,6 +490,8 @@ void SampleRender::D3D12Shader::CopyTextureBuffer(TextureElement textureElement)
 	srcLocation.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
 	//3rd arg represents the number of subresources
 	device->GetCopyableFootprints1(&textureDesc, 0, 1, 0, &srcLocation.PlacedFootprint, nullptr, nullptr, nullptr);
+
+	OpenCopyFence();
 
 	D3D12_RESOURCE_BARRIER barrier = {};
 	barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
