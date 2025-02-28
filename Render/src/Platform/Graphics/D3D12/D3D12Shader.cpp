@@ -156,7 +156,7 @@ void SampleRender::D3D12Shader::CreateCopyPipeline()
 
 	D3D12_COMMAND_QUEUE_DESC queueDesc{};
 	queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_HIGH;
+	queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	queueDesc.NodeMask = 0;
 	hr = device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_CopyCommandQueue.GetAddressOf()));
@@ -700,7 +700,7 @@ D3D12_TEXTURE_ADDRESS_MODE SampleRender::D3D12Shader::GetNativeAddressMode(Addre
 	switch (addressMode)
 	{
 		default:
-		case SampleRender::AddressMode::REPEAT:
+		case AddressMode::REPEAT:
 			return D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		case SampleRender::AddressMode::MIRROR:
 			return D3D12_TEXTURE_ADDRESS_MODE_MIRROR;

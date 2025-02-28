@@ -1,7 +1,7 @@
 #pragma pack_matrix(column_major)
 
 #define rs_controller \
-RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT), \
+RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | DENY_GEOMETRY_SHADER_ROOT_ACCESS), \
 RootConstants(num32BitConstants=48, b0), \
 CBV(b1), \
 DescriptorTable(SRV(t1, numDescriptors = 1)), \
